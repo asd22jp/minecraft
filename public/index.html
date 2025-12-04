@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FullStackCraft v11 - Crafting</title>
+    <title>FullStackCraft v12 - Inventory Fixed</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <div id="ui-layer">
       <div id="login-screen">
-        <h1>FullStackCraft v11</h1>
-        <p style="color: #fb0">Crafting System Update</p>
+        <h1>FullStackCraft v12</h1>
+        <p style="color: #0f0">Inventory Graphics Fixed</p>
         <input
           type="text"
           id="room-input"
@@ -18,11 +18,10 @@
           value="world1"
         />
         <button id="start-btn">Enter World</button>
-        <p><strong>E</strong> to Open Inventory & Crafting</p>
+        <p><strong>E</strong>: Inventory / Crafting</p>
       </div>
       <div id="game-ui" style="display: none">
         <div id="hud-top">
-          <span id="fps-counter">FPS: 60</span> |
           <span id="coord-info">X: 0 Y: 0</span>
         </div>
         <div id="inventory-bar"></div>
@@ -30,26 +29,21 @@
         <div id="mining-bar-container" style="display: none">
           <div id="mining-bar"></div>
         </div>
-
-        <!-- Main Inventory & Crafting Screen -->
         <div id="inventory-screen" style="display: none">
           <div class="panel">
             <h2>Inventory</h2>
             <div id="inv-grid"></div>
-            <p class="hint">Click item to select</p>
           </div>
           <div class="panel">
-            <h2>Crafting (3x3)</h2>
+            <h2>Crafting</h2>
             <div id="craft-grid"></div>
-            <div id="arrow">⬇</div>
+            <div id="arrow">➡</div>
             <div id="craft-result-slot" class="slot"></div>
-            <p class="hint">Click grid to place</p>
           </div>
         </div>
       </div>
     </div>
     <canvas id="game-canvas"></canvas>
-
     <script src="/socket.io/socket.io.js"></script>
     <script src="game.js"></script>
   </body>

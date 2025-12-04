@@ -1,43 +1,51 @@
 /**
- * FullStackCraft v11 - Crafting System
+ * FullStackCraft v12 - Fixed Inventory & Assets
  */
 
 const TILE_SIZE = 48;
 const CHUNK_SIZE = 16;
 const GRAVITY = 0.5;
 
-// --- BLOCK & ITEM DEFINITIONS ---
+// --- ID RANGES ---
+// Blocks: 1-99
+// Items (Materials): 200-299
+// Items (Tools): 100-199
+
 const BLOCKS = {
   0: { name: "Air", solid: false },
   1: {
     name: "Grass",
     color: "#5b8a36",
     solid: true,
-    hardness: 180,
+    hardness: 100,
     type: "grass",
+    drop: 2,
   },
   2: {
     name: "Dirt",
     color: "#704828",
     solid: true,
-    hardness: 180,
+    hardness: 100,
     type: "noise",
+    drop: 2,
   },
   3: {
     name: "Stone",
     color: "#757575",
     solid: true,
-    hardness: 600,
+    hardness: 400,
     type: "noise",
     reqTool: "pickaxe",
-  },
+    drop: 21,
+  }, // Drops Cobble(21)
   4: {
     name: "Log",
     color: "#5d4037",
     solid: true,
-    hardness: 300,
+    hardness: 200,
     type: "column",
     reqTool: "axe",
+    drop: 4,
   },
   5: {
     name: "Leaves",
@@ -45,14 +53,16 @@ const BLOCKS = {
     solid: true,
     hardness: 15,
     type: "noise",
-  },
+    drop: 200,
+  }, // Drops Stick(200) sometimes
   6: {
     name: "Planks",
     color: "#8d6e63",
     solid: true,
-    hardness: 200,
+    hardness: 150,
     type: "plank",
     reqTool: "axe",
+    drop: 6,
   },
   7: {
     name: "Bedrock",
@@ -65,55 +75,63 @@ const BLOCKS = {
     name: "CoalOre",
     color: "#222",
     solid: true,
-    hardness: 700,
+    hardness: 500,
     type: "ore",
     oreColor: "#111",
+    drop: 201,
   },
   12: {
     name: "IronOre",
     color: "#aaa",
     solid: true,
-    hardness: 800,
+    hardness: 600,
     type: "ore",
     oreColor: "#dcb",
+    drop: 202,
   },
   13: {
     name: "GoldOre",
     color: "#dd0",
     solid: true,
-    hardness: 900,
+    hardness: 700,
     type: "ore",
     oreColor: "#fe0",
+    drop: 203,
   },
   14: {
     name: "DiamondOre",
     color: "#0ee",
     solid: true,
-    hardness: 1200,
+    hardness: 900,
     type: "ore",
     oreColor: "#0ff",
+    drop: 204,
+  },
+  21: {
+    name: "Cobble",
+    color: "#555",
+    solid: true,
+    hardness: 400,
+    type: "brick",
+    reqTool: "pickaxe",
+    drop: 21,
   },
   31: {
     name: "CraftTable",
     color: "#a1887f",
     solid: true,
-    hardness: 300,
+    hardness: 200,
     type: "table",
     reqTool: "axe",
+    drop: 31,
   },
 };
 
 const ITEMS = {
   0: { name: "Air" },
   1: { name: "Hand", power: 1.0 },
-  // Materials
-  20: { name: "Stick", type: "item", iconColor: "#8d6e63" },
-  21: { name: "Coal", type: "item", iconColor: "#333" },
-  22: { name: "IronIngot", type: "item", iconColor: "#ccc" },
-  23: { name: "GoldIngot", type: "item", iconColor: "#ff0" },
-  24: { name: "Diamond", type: "item", iconColor: "#0ff" },
 
-  // Tools
+  // Tools (100+)
   100: {
     name: "WoodPick",
     power: 5.0,
@@ -128,21 +146,6 @@ const ITEMS = {
     toolType: "pickaxe",
     iconColor: "#757575",
   },
-  102: {
-    name: "IronPick",
-    power: 15.0,
-    type: "tool",
-    toolType: "pickaxe",
-    iconColor: "#ccc",
-  },
-  103: {
-    name: "DiaPick",
-    power: 25.0,
-    type: "tool",
-    toolType: "pickaxe",
-    iconColor: "#0ff",
-  },
-
   110: {
     name: "WoodAxe",
     power: 5.0,
@@ -150,14 +153,6 @@ const ITEMS = {
     toolType: "axe",
     iconColor: "#8d6e63",
   },
-  111: {
-    name: "StoneAxe",
-    power: 10.0,
-    type: "tool",
-    toolType: "axe",
-    iconColor: "#757575",
-  },
-
   120: {
     name: "WoodShovel",
     power: 5.0,
@@ -165,7 +160,6 @@ const ITEMS = {
     toolType: "shovel",
     iconColor: "#8d6e63",
   },
-
   130: {
     name: "WoodSword",
     power: 5.0,
@@ -173,37 +167,28 @@ const ITEMS = {
     toolType: "sword",
     iconColor: "#8d6e63",
   },
-  131: {
-    name: "StoneSword",
-    power: 7.0,
-    type: "weapon",
-    toolType: "sword",
-    iconColor: "#757575",
-  },
+
+  // Materials (200+)
+  200: { name: "Stick", type: "item", iconColor: "#8d6e63" },
+  201: { name: "Coal", type: "item", iconColor: "#333" },
+  202: { name: "Iron", type: "item", iconColor: "#ccc" },
+  203: { name: "Gold", type: "item", iconColor: "#ff0" },
+  204: { name: "Diamond", type: "item", iconColor: "#0ff" },
 };
 
-// --- RECIPES ---
-// pattern: 3x3 array (0=empty). Simple ID matching.
 const RECIPES = [
   // 1 Log -> 4 Planks
   { in: [4], out: { id: 6, count: 4 }, shapeless: true },
   // 2 Planks -> 4 Sticks
-  { in: [6, 6], out: { id: 20, count: 4 }, shapeless: true }, // Simplified to shapeless for ease
-  // 4 Planks -> CraftTable (2x2 square)
+  { in: [6, 6], out: { id: 200, count: 4 }, shapeless: true },
+  // 4 Planks -> CraftTable
   { pattern: [6, 6, 0, 6, 6, 0, 0, 0, 0], out: { id: 31, count: 1 } },
-
-  // -- TOOLS (Standard Shapes) --
-  // Wood Pickaxe (PPP / S / S)
-  { pattern: [6, 6, 6, 0, 20, 0, 0, 20, 0], out: { id: 100, count: 1 } },
-  // Stone Pickaxe
-  { pattern: [21, 21, 21, 0, 20, 0, 0, 20, 0], out: { id: 101, count: 1 } }, // (Use Cobble ID 21 from Stone drop)
-
-  // Wood Axe (PP / PS / S)
-  { pattern: [6, 6, 0, 6, 20, 0, 0, 20, 0], out: { id: 110, count: 1 } },
-  // Wood Shovel (P / S / S)
-  { pattern: [0, 6, 0, 0, 20, 0, 0, 20, 0], out: { id: 120, count: 1 } },
-  // Wood Sword (P / P / S)
-  { pattern: [0, 6, 0, 0, 6, 0, 0, 20, 0], out: { id: 130, count: 1 } },
+  // Wood Pickaxe
+  { pattern: [6, 6, 6, 0, 200, 0, 0, 200, 0], out: { id: 100, count: 1 } },
+  // Stone Pickaxe (Uses Cobble 21)
+  { pattern: [21, 21, 21, 0, 200, 0, 0, 200, 0], out: { id: 101, count: 1 } },
+  // Wood Axe
+  { pattern: [6, 6, 0, 6, 200, 0, 0, 200, 0], out: { id: 110, count: 1 } },
 ];
 
 class Drop {
@@ -318,10 +303,9 @@ class Game {
     this.selSlot = 0;
     this.mining = { active: false, bx: 0, by: 0, progress: 0 };
 
-    // Crafting State
     this.craftGrid = Array(9).fill({ id: 0, count: 0 });
     this.craftResult = { id: 0, count: 0 };
-    this.selectedInvSlot = -1; // For moving items
+    this.selectedInvSlot = -1;
 
     this.assets = { blocks: {}, items: {} };
     this.genAssets();
@@ -380,7 +364,7 @@ class Game {
   }
 
   genAssets() {
-    // Blocks
+    // Blocks (1-99)
     for (let id in BLOCKS) {
       if (id == 0) continue;
       const c = document.createElement("canvas");
@@ -414,9 +398,14 @@ class Game {
         ctx.fillRect(12, 12, 10, 10);
         ctx.fillRect(24, 24, 6, 6);
       }
+      if (b.type === "brick") {
+        ctx.strokeStyle = "rgba(255,255,255,0.2)";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(0, 0, TILE_SIZE, TILE_SIZE);
+      }
       this.assets.blocks[id] = c;
     }
-    // Items
+    // Items (100+)
     for (let id in ITEMS) {
       const it = ITEMS[id];
       const c = document.createElement("canvas");
@@ -448,11 +437,11 @@ class Game {
           ctx.fillRect(-6, 2, 12, 2);
         }
       } else if (it.type === "item") {
-        ctx.fillStyle = it.iconColor;
-        if (id == 20) {
+        ctx.fillStyle = it.iconColor || "#fff";
+        if (id == 200) {
           ctx.rotate(-Math.PI / 4);
           ctx.fillStyle = "#5d4037";
-          ctx.fillRect(14, 14, 4, 16);
+          ctx.fillRect(10, 14, 4, 16);
         } // Stick
         else ctx.fillRect(8, 8, 16, 16);
       }
@@ -655,21 +644,19 @@ class Game {
     document.getElementById("mining-bar").style.width = pct + "%";
     if (this.mining.progress >= block.hardness) {
       this.setBlock(bx, by, 0);
-      let did = id;
-      if (id === 1) did = 2;
-      if (id === 3) did = 21; // Mappings: Grass->Dirt, Stone->Cobble(New Item needed, use Coal for now as placeholder or 21)
-      // Fix: Add Cobble Item ID 21. Wait, 21 is Coal in ITEMS?
-      // Let's reuse: Coal=21. Cobble block is 21 in BLOCKS? No, Cobble is not in BLOCKS yet.
-      // Let's just drop Dirt(2) for Stone for simplicity in this version, or map correctly.
-      // Mapping: Stone(3) -> Cobble(Block, let's say ID 21). We need to define Cobble Item.
-      // For now: Stone drops Stone(3) to keep it simple, or Dirt(2).
-      this.drops.push(
-        new Drop(
-          bx * TILE_SIZE + TILE_SIZE / 2,
-          by * TILE_SIZE + TILE_SIZE / 2,
-          did
-        )
-      );
+      // Correct Drops
+      let did = block.drop || id;
+      if (id === 5 && Math.random() > 0.2) did = 0; // Leaves drop stick occasionally handled in drop def?
+      // No, simplified: Leaves always drop Stick(200) based on BLOCKS definition above.
+
+      if (did !== 0)
+        this.drops.push(
+          new Drop(
+            bx * TILE_SIZE + TILE_SIZE / 2,
+            by * TILE_SIZE + TILE_SIZE / 2,
+            did
+          )
+        );
       this.net.send({ type: "MINE", x: bx, y: by });
       this.mining.progress = 0;
     }
@@ -694,13 +681,13 @@ class Game {
       vy: 0,
       hp: 20,
       maxHp: 20,
-      inv: Array(27).fill({ id: 0, count: 0 }),
-    }; // Increased Inv size for storage
-    // Reset to 9 for hotbar simplicity in logic, but data structure holds more.
-    // Actually keep 9 for simplicity of UI.
-    this.players[id].inv = Array(9).fill({ id: 0, count: 0 });
-
+      inv: Array(9).fill({ id: 0, count: 0 }),
+    };
     if (id === this.net.myId) {
+      const inv = this.players[id].inv;
+      // Starter Kit
+      inv[0] = { id: 110, count: 1 }; // Wood Axe
+      inv[1] = { id: 100, count: 1 }; // Wood Pick
       this.updateUI();
       this.cam.x = x - this.width / 2;
       this.cam.y = y - this.height / 2;
@@ -712,27 +699,21 @@ class Game {
     for (let i = 0; i < 9; i++)
       if (p.inv[i].id === id) {
         p.inv[i].count += n;
+        if (pid === this.net.myId) this.updateUI();
         return;
       }
     for (let i = 0; i < 9; i++)
       if (p.inv[i].id === 0) {
         p.inv[i] = { id, count: n };
+        if (pid === this.net.myId) this.updateUI();
         return;
       }
   }
 
-  // --- CRAFTING LOGIC ---
   checkCrafting() {
-    // Simple pattern matching
-    // 1. Convert grid to simple array of IDs
     const gridIds = this.craftGrid.map((slot) => slot.id);
-
-    // 2. Check Shapeless
-    // (Not fully implemented for all, just simple loop for specifically tagged recipes)
-
     for (let r of RECIPES) {
       if (r.shapeless) {
-        // Count items in grid
         const gridCounts = {};
         let itemCount = 0;
         gridIds.forEach((id) => {
@@ -741,30 +722,23 @@ class Game {
             itemCount++;
           }
         });
-
-        // Count items in recipe
         const reqCounts = {};
         r.in.forEach((id) => {
           reqCounts[id] = (reqCounts[id] || 0) + 1;
         });
-
-        // Compare
         if (itemCount !== r.in.length) continue;
         let match = true;
-        for (let id in reqCounts) {
+        for (let id in reqCounts)
           if (gridCounts[id] !== reqCounts[id]) match = false;
-        }
         if (match) {
           this.craftResult = { id: r.out.id, count: r.out.count };
           this.updateCraftUI();
           return;
         }
       } else if (r.pattern) {
-        // Exact Match (Simplified: 0 must match 0)
         let match = true;
-        for (let i = 0; i < 9; i++) {
+        for (let i = 0; i < 9; i++)
           if (gridIds[i] !== r.pattern[i]) match = false;
-        }
         if (match) {
           this.craftResult = { id: r.out.id, count: r.out.count };
           this.updateCraftUI();
@@ -772,15 +746,11 @@ class Game {
         }
       }
     }
-
     this.craftResult = { id: 0, count: 0 };
     this.updateCraftUI();
   }
-
   craftItem() {
     if (this.craftResult.id === 0) return;
-
-    // Consume items
     for (let i = 0; i < 9; i++) {
       if (this.craftGrid[i].id !== 0) {
         this.craftGrid[i].count--;
@@ -788,11 +758,7 @@ class Game {
           this.craftGrid[i] = { id: 0, count: 0 };
       }
     }
-
-    // Add Result
     this.giveItem(this.net.myId, this.craftResult.id, this.craftResult.count);
-
-    // Re-check
     this.checkCrafting();
   }
 
@@ -823,9 +789,7 @@ class Game {
         const id = this.getBlock(msg.x, msg.y);
         if (id && !BLOCKS[id].unbreakable) {
           this.setBlock(msg.x, msg.y, 0);
-          let did = id;
-          if (id === 1) did = 2;
-          if (id === 3) did = 21; // Stone->Coal(placeholder)
+          let did = BLOCKS[id].drop || id;
           this.drops.push(
             new Drop(
               msg.x * TILE_SIZE + TILE_SIZE / 2,
@@ -846,13 +810,11 @@ class Game {
       }
     }
   }
-
   sendInput() {
     if (this.net.isHost)
       this.onPacket({ type: "INPUT", keys: this.keys }, this.net.myId);
     else this.net.sendTo(this.net.hostId, { type: "INPUT", keys: this.keys });
   }
-
   render() {
     if (!this.players[this.net.myId]) return;
     const p = this.players[this.net.myId];
@@ -890,19 +852,16 @@ class Game {
         }
       }
     }
-
     if (this.mining.active) {
       const wx = this.mining.bx * TILE_SIZE - this.cam.x;
       const wy = this.mining.by * TILE_SIZE - this.cam.y;
       this.ctx.fillStyle = "rgba(255,255,255,0.3)";
       this.ctx.fillRect(wx, wy, TILE_SIZE, TILE_SIZE);
     }
-
     this.drops.forEach((d) => {
       const i = this.assets.blocks[d.itemId] || this.assets.items[d.itemId];
       if (i) this.ctx.drawImage(i, d.x - this.cam.x, d.y - this.cam.y, 20, 20);
     });
-
     for (let id in this.players) {
       const ply = this.players[id];
       const px = ply.x - this.cam.x,
@@ -911,11 +870,7 @@ class Game {
       this.ctx.fillRect(px, py, 24, 54);
     }
     this.sendInput();
-    document.getElementById("coord-info").innerText = `X:${Math.floor(
-      p.x / TILE_SIZE
-    )} Y:${Math.floor(p.y / TILE_SIZE)}`;
   }
-
   initInvUI() {
     const g = document.getElementById("inv-grid");
     g.innerHTML = "";
@@ -924,35 +879,23 @@ class Game {
       d.className = "slot";
       d.onclick = () => {
         this.selectedInvSlot = i;
-        this.updateUI(); // Highlight logic
+        this.updateUI();
       };
       g.appendChild(d);
     }
-
     const cg = document.getElementById("craft-grid");
     cg.innerHTML = "";
     for (let i = 0; i < 9; i++) {
       const d = document.createElement("div");
       d.className = "slot";
       d.onclick = () => {
-        // Move logic: Inv -> Craft
         if (this.selectedInvSlot !== -1) {
           const p = this.players[this.net.myId];
           const item = p.inv[this.selectedInvSlot];
           if (item.id !== 0 && item.count > 0) {
-            // Move 1
             item.count--;
-            if (this.craftGrid[i].id === item.id) {
-              this.craftGrid[i].count++;
-            } else {
-              // Swap/Overwrite (Simplification: Just overwrite or fill empty)
-              if (this.craftGrid[i].id !== 0) {
-                // Return old to inv? No complex logic for single file.
-                // Just Overwrite for now, or only fill empty.
-                // Let's fill empty only to prevent loss
-              }
-              this.craftGrid[i] = { id: item.id, count: 1 };
-            }
+            if (this.craftGrid[i].id === item.id) this.craftGrid[i].count++;
+            else this.craftGrid[i] = { id: item.id, count: 1 };
             if (item.count <= 0)
               p.inv[this.selectedInvSlot] = { id: 0, count: 0 };
             this.checkCrafting();
@@ -961,7 +904,6 @@ class Game {
           }
         }
       };
-      // Right click to clear slot?
       d.oncontextmenu = (e) => {
         e.preventDefault();
         if (this.craftGrid[i].id !== 0) {
@@ -978,14 +920,12 @@ class Game {
       };
       cg.appendChild(d);
     }
-
     document.getElementById("craft-result-slot").onclick = () => {
       this.craftItem();
       this.updateUI();
       this.updateCraftUI();
     };
   }
-
   updateUI() {
     const p = this.players[this.net.myId];
     if (!p) return;
@@ -1016,48 +956,42 @@ class Game {
     const grid = document.getElementById("inv-grid").children;
     p.inv.forEach((it, i) => {
       ren(grid[i], it);
-      if (i === this.selectedInvSlot) grid[i].style.borderColor = "#0f0";
-      else grid[i].style.borderColor = "#444";
+      grid[i].style.borderColor = i === this.selectedInvSlot ? "#0f0" : "#444";
     });
   }
-
   updateCraftUI() {
     const grid = document.getElementById("craft-grid").children;
     this.craftGrid.forEach((it, i) => {
       const el = grid[i];
       el.innerHTML = "";
       if (it.id) {
-        const iAsset = this.assets.blocks[it.id] || this.assets.items[it.id];
-        if (iAsset) {
+        const i = this.assets.blocks[it.id] || this.assets.items[it.id];
+        if (i) {
           const c = document.createElement("canvas");
           c.width = 32;
           c.height = 32;
-          c.getContext("2d").drawImage(iAsset, 0, 0);
+          c.getContext("2d").drawImage(i, 0, 0);
           el.appendChild(c);
         }
         el.innerHTML += `<span class="count">${it.count}</span>`;
       }
     });
-
     const resEl = document.getElementById("craft-result-slot");
     resEl.innerHTML = "";
     if (this.craftResult.id !== 0) {
       const it = this.craftResult;
-      const iAsset = this.assets.blocks[it.id] || this.assets.items[it.id];
-      if (iAsset) {
+      const i = this.assets.blocks[it.id] || this.assets.items[it.id];
+      if (i) {
         const c = document.createElement("canvas");
         c.width = 32;
         c.height = 32;
-        c.getContext("2d").drawImage(iAsset, 0, 0);
+        c.getContext("2d").drawImage(i, 0, 0);
         resEl.appendChild(c);
       }
       resEl.innerHTML += `<span class="count">${it.count}</span>`;
       resEl.style.cursor = "pointer";
-    } else {
-      resEl.style.cursor = "default";
-    }
+    } else resEl.style.cursor = "default";
   }
-
   toggleInv() {
     const s = document.getElementById("inventory-screen");
     if (s.style.display === "none") {
@@ -1065,9 +999,7 @@ class Game {
       this.selectedInvSlot = -1;
       this.updateUI();
       this.updateCraftUI();
-    } else {
-      s.style.display = "none";
-    }
+    } else s.style.display = "none";
   }
 }
 window.onload = () => new Game();
