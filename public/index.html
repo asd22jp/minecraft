@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FullStackCraft P2P</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="ui-layer">
+      <div id="login-screen">
+        <h1>FullStackCraft P2P</h1>
+        <input
+          type="text"
+          id="room-input"
+          placeholder="Room Name"
+          value="world1"
+        />
+        <button id="start-btn">Game Start</button>
+        <p>
+          Controls: WASD=Move, Click=Dig/Place, E=Inventory, 1-9=Slot, F=Attack
+        </p>
+      </div>
+      <div id="game-ui" style="display: none">
+        <div id="debug-info">FPS: 0 | Ping: 0ms</div>
+        <div id="inventory-bar"></div>
+        <div id="health-bar"><div id="hp-inner"></div></div>
+        <div id="inventory-screen" style="display: none">
+          <h2>Inventory</h2>
+          <div id="inv-grid"></div>
+          <h2>Crafting (2x2)</h2>
+          <div id="craft-grid"></div>
+          <div id="craft-result"></div>
+        </div>
+        <div id="chat-overlay"></div>
+      </div>
+    </div>
+    <canvas id="game-canvas"></canvas>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="game.js"></script>
+  </body>
+</html>

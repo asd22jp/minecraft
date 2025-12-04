@@ -1,0 +1,117 @@
+body {
+  margin: 0;
+  overflow: hidden;
+  background: #222;
+  font-family: monospace;
+  color: white;
+}
+#ui-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+#login-screen {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.8);
+  padding: 20px;
+  text-align: center;
+  pointer-events: auto;
+  border: 2px solid #555;
+}
+#game-canvas {
+  display: block;
+}
+#inventory-bar {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 5px;
+  pointer-events: auto;
+}
+.slot {
+  width: 40px;
+  height: 40px;
+  border: 2px solid #555;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  position: relative;
+  cursor: pointer;
+}
+.slot.active {
+  border-color: white;
+}
+.count {
+  position: absolute;
+  bottom: 0;
+  right: 2px;
+  font-size: 10px;
+  color: #fff;
+}
+#health-bar {
+  position: absolute;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 10px;
+  background: #333;
+  border: 1px solid white;
+}
+#hp-inner {
+  width: 100%;
+  height: 100%;
+  background: #f00;
+  transition: width 0.1s;
+}
+#inventory-screen {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.9);
+  padding: 20px;
+  border: 2px solid #fff;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+#inv-grid,
+#craft-grid {
+  display: grid;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+#inv-grid {
+  grid-template-columns: repeat(9, 40px);
+}
+#craft-grid {
+  grid-template-columns: repeat(2, 40px);
+}
+#craft-result {
+  width: 40px;
+  height: 40px;
+  border: 2px solid gold;
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#debug-info {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  font-size: 12px;
+  text-shadow: 1px 1px 0 #000;
+}
