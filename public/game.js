@@ -1,13 +1,13 @@
 /**
- * FullStackCraft v15 - Physics Fix, Skins, Nicknames
+ * FullStackCraft v16 - Nature Fix (Trees Everywhere!)
  */
 
-const TILE_SIZE = 60; // Bigger Blocks
+const TILE_SIZE = 60;
 const CHUNK_SIZE = 16;
 const GRAVITY = 0.6;
 const TERMINAL_VELOCITY = 15;
 const PLAYER_WIDTH = 40;
-const PLAYER_HEIGHT = 56; // Slightly shorter than 1 tile width for easier fit
+const PLAYER_HEIGHT = 56;
 
 // --- DEFINITIONS ---
 const BLOCKS = {
@@ -240,7 +240,7 @@ class AssetGen {
         ctx.translate(32, 32);
         ctx.rotate(-Math.PI / 4);
         ctx.fillStyle = "#5d4037";
-        ctx.fillRect(-4, 0, 8, 32); // Handle
+        ctx.fillRect(-4, 0, 8, 32);
         ctx.fillStyle = it.iconColor;
         if (it.toolType === "pick") {
           ctx.beginPath();
@@ -348,8 +348,8 @@ class Game {
   }
 
   start() {
-    this.spawn(0, -200);
-    // Send Profile
+    // ★ Spawn in a Forest/Plains area to ensure trees
+    this.spawn(1000, -200);
     this.net.send({
       type: "PROFILE",
       id: this.net.myId,
@@ -407,26 +407,61 @@ class Game {
     }
     return null;
   }
+
+  // ★ FIXED: Tree Generation in Chunk
   genChunk(cx, cy) {
     const d = new Uint8Array(CHUNK_SIZE * CHUNK_SIZE);
     for (let x = 0; x < CHUNK_SIZE; x++) {
       const wx = cx * CHUNK_SIZE + x;
+      // Biome: mostly plains/forest for now to guarantee trees
       const h = Math.floor(
         40 + Math.sin(wx * 0.05) * 10 + Math.sin(wx * 0.01) * 20
       );
+
       for (let y = 0; y < CHUNK_SIZE; y++) {
         const wy = cy * CHUNK_SIZE + y;
         let id = 0;
-        if (wy > 80) id = 99;
+        if (wy > 80) id = 99; // Bedrock
         else if (wy > h) {
           id = 3;
           if (wy < h + 4) id = 2;
-        } else if (wy === h) id = 1;
+        } else if (wy === h) {
+          id = 1; // Grass
+          // Tree Chance (Higher!)
+          if (Math.random() < 0.15) {
+            // Place Trunk directly in this column
+            for (let i = 1; i <= 4; i++) {
+              const ty = y - i;
+              if (ty >= 0) d[ty * CHUNK_SIZE + x] = 4; // Oak Log
+            }
+            // Queue leaves (needs neighboring chunks or careful placement)
+            // Simplified: Only place leaves if they fit in current chunk for v16 stability
+            // Better: Use delayed setBlock for leaves to handle cross-chunk
+            this.queueLeaves(wx, wy - 4);
+          }
+        }
         if (d[y * CHUNK_SIZE + x] === 0) d[y * CHUNK_SIZE + x] = id;
       }
     }
     return d;
   }
+
+  // ★ NEW: Reliable Leaf Placement
+  queueLeaves(gx, gy) {
+    // Place leaves in a 3x3 or 5x5 area around the top
+    // Delay slightly to ensure trunk is set and neighbors might exist
+    setTimeout(() => {
+      for (let ly = gy - 2; ly <= gy + 1; ly++) {
+        for (let lx = gx - 2; lx <= gx + 2; lx++) {
+          // Don't overwrite solid blocks
+          if (!this.isSolid(lx * TILE_SIZE, ly * TILE_SIZE)) {
+            this.setBlock(lx, ly, 5); // Leaves
+          }
+        }
+      }
+    }, 50);
+  }
+
   setBlock(gx, gy, id) {
     const cx = Math.floor(gx / CHUNK_SIZE),
       cy = Math.floor(gy / CHUNK_SIZE);
@@ -504,49 +539,35 @@ class Game {
     }
   }
 
-  // --- PHYSICS (FIXED AABB) ---
   phys() {
     for (let id in this.players) {
       const p = this.players[id];
-
-      // X Movement
-      p.vx *= 0.9; // Friction
+      p.vx *= 0.9;
       if (Math.abs(p.vx) < 0.1) p.vx = 0;
       if (p.vx > 8) p.vx = 8;
-      if (p.vx < -8) p.vx = -8; // Cap X speed
-
-      // Apply X
+      if (p.vx < -8) p.vx = -8;
       p.x += p.vx;
       this.resolveCollision(p, "x");
-
-      // Y Movement
       p.vy += GRAVITY;
       if (p.vy > TERMINAL_VELOCITY) p.vy = TERMINAL_VELOCITY;
-
-      // Apply Y
       p.y += p.vy;
       this.resolveCollision(p, "y");
-
       if (p.y > 3000) {
-        p.x = 0;
+        p.x = 1000;
         p.y = -200;
         p.vy = 0;
-      } // Void Respawn
+      }
     }
-
-    // Drops Physics
     for (let i = this.drops.length - 1; i >= 0; i--) {
       const d = this.drops[i];
       d.vy += GRAVITY;
       d.y += d.vy;
       d.x += d.vx;
-      // Simple drop collision (point based is enough for drops)
       if (this.isSolid(d.x, d.y + 10)) {
         d.y = Math.floor(d.y / TILE_SIZE) * TILE_SIZE - 10;
         d.vy = 0;
         d.vx *= 0.8;
       }
-
       for (let pid in this.players) {
         const p = this.players[pid];
         if (
@@ -562,52 +583,45 @@ class Game {
   }
 
   resolveCollision(p, axis) {
-    // AABB check
     const minX = Math.floor(p.x / TILE_SIZE);
     const maxX = Math.floor((p.x + PLAYER_WIDTH - 0.1) / TILE_SIZE);
     const minY = Math.floor(p.y / TILE_SIZE);
     const maxY = Math.floor((p.y + PLAYER_HEIGHT - 0.1) / TILE_SIZE);
-
     if (axis === "x") {
-      if (p.vx > 0) {
-        // Moving Right
-        if (this.isSolidTile(maxX, minY) || this.isSolidTile(maxX, maxY)) {
-          p.x = maxX * TILE_SIZE - PLAYER_WIDTH;
-          p.vx = 0;
-        }
-      } else if (p.vx < 0) {
-        // Moving Left
-        if (this.isSolidTile(minX, minY) || this.isSolidTile(minX, maxY)) {
-          p.x = (minX + 1) * TILE_SIZE;
-          p.vx = 0;
-        }
+      if (
+        p.vx > 0 &&
+        (this.isSolidTile(maxX, minY) || this.isSolidTile(maxX, maxY))
+      ) {
+        p.x = maxX * TILE_SIZE - PLAYER_WIDTH;
+        p.vx = 0;
+      } else if (
+        p.vx < 0 &&
+        (this.isSolidTile(minX, minY) || this.isSolidTile(minX, maxY))
+      ) {
+        p.x = (minX + 1) * TILE_SIZE;
+        p.vx = 0;
       }
     } else {
-      // axis === 'y'
-      if (p.vy > 0) {
-        // Falling
-        if (this.isSolidTile(minX, maxY) || this.isSolidTile(maxX, maxY)) {
-          p.y = maxY * TILE_SIZE - PLAYER_HEIGHT;
-          p.vy = 0;
-          p.grounded = true;
-        } else {
-          p.grounded = false;
-        }
-      } else if (p.vy < 0) {
-        // Jumping
-        if (this.isSolidTile(minX, minY) || this.isSolidTile(maxX, minY)) {
-          p.y = (minY + 1) * TILE_SIZE;
-          p.vy = 0;
-        }
-      }
+      if (
+        p.vy > 0 &&
+        (this.isSolidTile(minX, maxY) || this.isSolidTile(maxX, maxY))
+      ) {
+        p.y = maxY * TILE_SIZE - PLAYER_HEIGHT;
+        p.vy = 0;
+        p.grounded = true;
+      } else if (
+        p.vy < 0 &&
+        (this.isSolidTile(minX, minY) || this.isSolidTile(maxX, minY))
+      ) {
+        p.y = (minY + 1) * TILE_SIZE;
+        p.vy = 0;
+      } else if (p.vy > 0) p.grounded = false;
     }
   }
-
   isSolidTile(tx, ty) {
     const id = this.getBlock(tx, ty);
     return id && BLOCKS[id].solid;
   }
-
   isSolid(x, y) {
     return this.isSolidTile(
       Math.floor(x / TILE_SIZE),
@@ -671,7 +685,7 @@ class Game {
     }
 
     this.drops.forEach((d) => {
-      const i = this.assets[d.id] || this.assets[1]; // Fallback
+      const i = this.assets[d.id] || this.assets[1];
       if (i)
         this.ctx.drawImage(
           i,
@@ -686,24 +700,16 @@ class Game {
       const ply = this.players[id];
       const px = ply.x - this.cam.x,
         py = ply.y - this.cam.y;
-
-      // Draw Skin
       const skin = ply.profile
         ? ply.profile.skin
         : { head: "#ffccaa", body: "#3366cc", legs: "#333333" };
-
-      // Head
       this.ctx.fillStyle = skin.head;
       this.ctx.fillRect(px + 8, py, 24, 24);
-      // Body
       this.ctx.fillStyle = skin.body;
       this.ctx.fillRect(px + 4, py + 24, 32, 20);
-      // Legs
       this.ctx.fillStyle = skin.legs;
-      this.ctx.fillRect(px + 8, py + 44, 10, 12); // L
-      this.ctx.fillRect(px + 22, py + 44, 10, 12); // R
-
-      // Name
+      this.ctx.fillRect(px + 8, py + 44, 10, 12);
+      this.ctx.fillRect(px + 22, py + 44, 10, 12);
       this.ctx.fillStyle = "#fff";
       this.ctx.font = "12px Arial";
       this.ctx.textAlign = "center";
@@ -913,11 +919,11 @@ class Game {
       chunks: Array.from(Object.entries(this.chunks)),
       player: { x: p.x, y: p.y, inv: p.inv, profile: p.profile },
     };
-    localStorage.setItem("fsc15", JSON.stringify(data));
+    localStorage.setItem("fsc16", JSON.stringify(data));
     alert("Saved!");
   }
   loadGame() {
-    const j = localStorage.getItem("fsc15");
+    const j = localStorage.getItem("fsc16");
     if (!j) return alert("No save");
     const d = JSON.parse(j);
     this.chunks = {};
@@ -1009,7 +1015,6 @@ class Network {
       }
     } else if (m.type === "BLOCK") this.game.setBlock(m.x, m.y, m.id);
     else if (m.type === "SYNC") {
-      // Sync others but keep local physics smooth
       for (let id in m.players) {
         if (id !== this.game.net.myId) this.game.players[id] = m.players[id];
       }
