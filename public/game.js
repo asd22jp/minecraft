@@ -1,14 +1,12 @@
 /**
- * FullStackCraft v9 - Infinite Chunks & Balanced Mining
+ * FullStackCraft v10 - Lag-Free Mining & Robust Chunks
  */
 
 const TILE_SIZE = 48;
 const CHUNK_SIZE = 16;
 const GRAVITY = 0.5;
 
-// --- BALANCED BLOCK DEFINITIONS ---
-// Hardness: 1 sec = 60 frames.
-// Wood (Hand) = 5 sec = 300 frames.
+// Balance: 1 sec = 60 frames.
 const BLOCKS = {
   0: { name: "Air", solid: false },
   1: {
@@ -32,7 +30,7 @@ const BLOCKS = {
     hardness: 600,
     type: "noise",
     reqTool: "pickaxe",
-  }, // 10s (Hand)
+  }, // 10s
   4: {
     name: "Wood",
     color: "#5d4037",
@@ -40,7 +38,7 @@ const BLOCKS = {
     hardness: 300,
     type: "column",
     reqTool: "axe",
-  }, // 5s (Hand)
+  }, // 5s
   5: {
     name: "Leaves",
     color: "#388e3c",
@@ -106,28 +104,28 @@ const ITEMS = {
     type: "tool",
     toolType: "pickaxe",
     iconColor: "#8d6e63",
-  }, // Stone: 600/5 = 120f (2s)
+  },
   3: {
     name: "StonePick",
     power: 10.0,
     type: "tool",
     toolType: "pickaxe",
     iconColor: "#757575",
-  }, // Stone: 60s/10 = 60f (1s)
+  },
   4: {
     name: "WoodAxe",
     power: 5.0,
     type: "tool",
     toolType: "axe",
     iconColor: "#8d6e63",
-  }, // Wood: 300/5 = 60f (1s)
+  },
   5: {
     name: "Shovel",
     power: 5.0,
     type: "tool",
     toolType: "shovel",
     iconColor: "#ccc",
-  }, // Dirt: 180/5 = 36f (0.6s)
+  },
 };
 
 class Drop {
@@ -231,7 +229,6 @@ class Game {
     this.ctx = this.canvas.getContext("2d");
     this.fitScreen();
 
-    // Chunk System: key="x,y" value=Uint8Array(CHUNK_SIZE*CHUNK_SIZE)
     this.chunks = {};
     this.players = {};
     this.drops = [];
@@ -300,7 +297,6 @@ class Game {
   }
 
   genAssets() {
-    // Procedural Textures
     for (let id in BLOCKS) {
       if (id == 0) continue;
       const c = document.createElement("canvas");
@@ -310,8 +306,6 @@ class Game {
       const b = BLOCKS[id];
       ctx.fillStyle = b.color || "#f0f";
       ctx.fillRect(0, 0, TILE_SIZE, TILE_SIZE);
-
-      // Noise & Detail
       ctx.fillStyle = "rgba(0,0,0,0.1)";
       for (let i = 0; i < 20; i++)
         ctx.fillRect(
@@ -320,7 +314,6 @@ class Game {
           2,
           2
         );
-
       if (b.type === "grass") {
         ctx.fillStyle = "#4caf50";
         ctx.fillRect(0, 0, TILE_SIZE, 10);
@@ -340,7 +333,6 @@ class Game {
         ctx.fillRect(12, 12, 10, 10);
         ctx.fillRect(24, 24, 6, 6);
       }
-
       this.assets.blocks[id] = c;
     }
     for (let id in ITEMS) {
@@ -363,7 +355,6 @@ class Game {
     }
   }
 
-  // --- CHUNK SYSTEM ---
   getChunkKey(cx, cy) {
     return `${cx},${cy}`;
   }
@@ -371,7 +362,6 @@ class Game {
   getChunk(cx, cy) {
     const key = this.getChunkKey(cx, cy);
     if (this.chunks[key]) return this.chunks[key];
-    // If host, generate on demand
     if (this.net.isHost) {
       const chunk = this.genChunkData(cx, cy);
       this.chunks[key] = chunk;
@@ -386,31 +376,23 @@ class Game {
 
   genChunkData(cx, cy) {
     const data = new Uint8Array(CHUNK_SIZE * CHUNK_SIZE);
-    // Noise Function
     const noise = (x) => Math.sin(x * 0.1) * 10 + Math.sin(x * 0.03) * 20;
-
     for (let x = 0; x < CHUNK_SIZE; x++) {
       const gx = cx * CHUNK_SIZE + x;
       const h = Math.floor(noise(gx));
-
       for (let y = 0; y < CHUNK_SIZE; y++) {
         const gy = cy * CHUNK_SIZE + y;
         let id = 0;
-
-        // Terrain Generation (No Desert)
-        if (gy > 40) id = 7; // Bedrock deep down
+        if (gy > 40) id = 7;
         else if (gy > h) {
-          id = 3; // Stone
-          if (gy < h + 4) id = 2; // Dirt layer
-          // Ores
+          id = 3;
+          if (gy < h + 4) id = 2;
           if (id === 3 && Math.random() < 0.04)
             id = 11 + Math.floor(Math.random() * 4);
         } else if (gy === h) {
-          id = 1; // Grass
-          // Trees (Forest)
+          id = 1;
           if (Math.random() < 0.1) this.treeQueue(gx, gy - 1);
         }
-
         if (data[y * CHUNK_SIZE + x] === 0) data[y * CHUNK_SIZE + x] = id;
       }
     }
@@ -418,15 +400,11 @@ class Game {
   }
 
   treeQueue(gx, gy) {
-    // Delayed tree generation to avoid overwriting current chunk loop complexity
-    // Simplified: Just set if chunk exists (Host only)
-    // For this demo, we assume trees generate within the column pass or handled via post-proc.
-    // Direct approach: Set blocks in world using setBlock (handles chunk lookup)
     setTimeout(() => {
-      for (let i = 0; i < 4; i++) this.setBlock(gx, gy - i, 4); // Wood
+      for (let i = 0; i < 4; i++) this.setBlock(gx, gy - i, 4);
       for (let ly = gy - 5; ly <= gy - 3; ly++)
         for (let lx = gx - 2; lx <= gx + 2; lx++) {
-          if (!this.getBlock(lx, ly)) this.setBlock(lx, ly, 5); // Leaves
+          if (!this.getBlock(lx, ly)) this.setBlock(lx, ly, 5);
         }
     }, 10);
   }
@@ -446,29 +424,22 @@ class Game {
     const cy = Math.floor(gy / CHUNK_SIZE);
     const key = this.getChunkKey(cx, cy);
     let chunk = this.chunks[key];
-    if (!chunk) return; // Should not happen if interacting
+    if (!chunk) return;
     const lx = ((gx % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
     const ly = ((gy % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
     chunk[ly * CHUNK_SIZE + lx] = id;
-
-    // Broadcast change if host
-    if (this.net.isHost) {
+    if (this.net.isHost)
       this.net.broadcast({ type: "BLOCK", x: gx, y: gy, id });
-    }
   }
 
-  // --- MAIN LOOP ---
   loop() {
     if (this.net.isHost) {
-      // Generate chunks around players
       for (let id in this.players) {
         const p = this.players[id];
         const cx = Math.floor(p.x / TILE_SIZE / CHUNK_SIZE);
         const cy = Math.floor(p.y / TILE_SIZE / CHUNK_SIZE);
         for (let dy = -1; dy <= 1; dy++)
-          for (let dx = -2; dx <= 2; dx++) {
-            this.getChunk(cx + dx, cy + dy);
-          }
+          for (let dx = -2; dx <= 2; dx++) this.getChunk(cx + dx, cy + dy);
       }
       this.updatePhys();
       this.updateDrops();
@@ -496,7 +467,7 @@ class Game {
         p.x = 0;
         p.y = -200;
         p.vy = 0;
-      } // Respawn
+      }
     }
   }
 
@@ -579,22 +550,35 @@ class Game {
     const block = BLOCKS[id];
 
     let power = 1.0;
-    // Tool Logic
     if (block.reqTool) {
-      if (tool.toolType === block.reqTool) power = tool.power; // Efficient
-      else power = 1.0; // Hand speed (slow but possible)
+      if (tool.toolType === block.reqTool) power = tool.power;
+      else power = 1.0;
     } else {
-      power = tool.power || 1.0; // General block
+      power = tool.power || 1.0;
     }
 
     this.mining.progress += power;
-
-    // UI
     const pct = Math.min(100, (this.mining.progress / block.hardness) * 100);
     document.getElementById("mining-bar-container").style.display = "block";
     document.getElementById("mining-bar").style.width = pct + "%";
 
     if (this.mining.progress >= block.hardness) {
+      // ★ CLIENT-SIDE IMMEDIATE DESTRUCTION ★
+      // We set it to 0 immediately to prevent "full bar but no break"
+      this.setBlock(bx, by, 0);
+      // Create a fake local drop for instant feedback (Server will sync real one later, but visuals first)
+      let did = id;
+      if (id === 1) did = 2;
+      if (id === 3) did = 21; // Mappings
+      this.drops.push(
+        new Drop(
+          bx * TILE_SIZE + TILE_SIZE / 2,
+          by * TILE_SIZE + TILE_SIZE / 2,
+          did
+        )
+      );
+
+      // Send to server
       this.net.send({ type: "MINE", x: bx, y: by });
       this.mining.progress = 0;
     }
@@ -624,8 +608,7 @@ class Game {
     };
     if (id === this.net.myId) {
       const inv = this.players[id].inv;
-      // Starter Kit
-      inv[0] = { id: 4, count: 1 }; // Axe (for testing wood)
+      inv[0] = { id: 4, count: 1 }; // Axe
       inv[1] = { id: 2, count: 1 }; // Pick
       this.updateUI();
       this.cam.x = x - this.width / 2;
@@ -672,12 +655,14 @@ class Game {
       }
       if (msg.type === "MINE") {
         const id = this.getBlock(msg.x, msg.y);
+        // Host allows validation, but since client already broke it visually,
+        // we mostly just sync and create drops.
+        // Even if host thinks it's air (race condition), we might ignore or re-sync.
         if (id && !BLOCKS[id].unbreakable) {
           this.setBlock(msg.x, msg.y, 0);
-          // Drop mapping
           let did = id;
-          if (id === 1) did = 2; // Grass->Dirt
-          if (id === 3) did = 21; // Stone->Cobble
+          if (id === 1) did = 2;
+          if (id === 3) did = 21;
           this.drops.push(
             new Drop(
               msg.x * TILE_SIZE + TILE_SIZE / 2,
@@ -708,8 +693,8 @@ class Game {
   render() {
     if (!this.players[this.net.myId]) return;
     const p = this.players[this.net.myId];
-    this.cam.x = p.x - this.width / 2;
-    this.cam.y = p.y - this.height / 2;
+    this.cam.x += (p.x - this.width / 2 - this.cam.x) * 0.1;
+    this.cam.y += (p.y - this.height / 2 - this.cam.y) * 0.1;
 
     const g = this.ctx.createLinearGradient(0, 0, 0, this.height);
     g.addColorStop(0, "#87CEEB");
@@ -717,7 +702,6 @@ class Game {
     this.ctx.fillStyle = g;
     this.ctx.fillRect(0, 0, this.width, this.height);
 
-    // Render visible chunks
     const startCX = Math.floor(this.cam.x / TILE_SIZE / CHUNK_SIZE);
     const endCX = startCX + Math.ceil(this.width / TILE_SIZE / CHUNK_SIZE) + 1;
     const startCY = Math.floor(this.cam.y / TILE_SIZE / CHUNK_SIZE);
@@ -744,7 +728,6 @@ class Game {
       }
     }
 
-    // Mining overlay
     if (this.mining.active) {
       const wx = this.mining.bx * TILE_SIZE - this.cam.x;
       const wy = this.mining.by * TILE_SIZE - this.cam.y;
