@@ -1,8 +1,8 @@
 body {
   margin: 0;
   overflow: hidden;
-  background: #000;
-  font-family: monospace;
+  background: #111;
+  font-family: "Consolas", sans-serif;
   user-select: none;
 }
 #ui-layer {
@@ -13,14 +13,16 @@ body {
   height: 100%;
   pointer-events: none;
 }
+
 #login-screen {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(30, 30, 30, 0.95);
-  border: 1px solid #555;
-  padding: 30px;
+  background: linear-gradient(180deg, #222, #111);
+  border: 2px solid #444;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+  padding: 40px;
   border-radius: 8px;
   text-align: center;
   color: white;
@@ -28,98 +30,111 @@ body {
 }
 input,
 button {
-  padding: 10px;
+  padding: 12px;
   margin: 10px;
   border-radius: 4px;
-  border: none;
+  border: 1px solid #555;
+  background: #333;
+  color: white;
   font-family: inherit;
 }
 button {
-  background: #4caf50;
-  color: white;
+  background: #3a6ea5;
   cursor: pointer;
   font-weight: bold;
 }
 button:hover {
-  background: #45a049;
+  background: #4a7eb5;
 }
-#debug-info {
+
+#hud-top {
   position: absolute;
   top: 10px;
   left: 10px;
   color: white;
   text-shadow: 1px 1px 0 #000;
+  font-size: 14px;
 }
+
 #inventory-bar {
   position: absolute;
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
   background: rgba(0, 0, 0, 0.7);
-  padding: 5px;
-  border-radius: 5px;
+  padding: 8px;
+  border-radius: 8px;
   display: flex;
-  gap: 5px;
+  gap: 6px;
   pointer-events: auto;
+  backdrop-filter: blur(4px);
 }
 .slot {
-  width: 44px;
-  height: 44px;
-  background: rgba(255, 255, 255, 0.1);
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.05);
   border: 2px solid #555;
   position: relative;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: transform 0.1s, border-color 0.1s;
 }
 .slot.active {
-  border-color: #fff;
-  background: rgba(255, 255, 255, 0.2);
+  border-color: #eee;
+  background: rgba(255, 255, 255, 0.15);
+  transform: scale(1.1);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
 }
 .count {
   position: absolute;
-  bottom: 0;
-  right: 2px;
+  bottom: 2px;
+  right: 4px;
   color: white;
-  font-size: 10px;
+  font-size: 12px;
+  font-weight: bold;
+  text-shadow: 1px 1px 0 #000;
 }
+
 #health-container {
   position: absolute;
-  bottom: 80px;
+  bottom: 90px;
   left: 50%;
   transform: translateX(-50%);
-  width: 200px;
+  width: 300px;
   height: 16px;
-  background: #333;
+  background: #222;
   border: 2px solid #000;
 }
 #health-bar {
   width: 100%;
   height: 100%;
-  background: #f44;
+  background: linear-gradient(90deg, #d00, #900);
   transition: width 0.2s;
 }
+
 #inventory-screen {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(20, 20, 20, 0.95);
+  background: rgba(30, 30, 30, 0.95);
   padding: 20px;
   border-radius: 8px;
-  border: 1px solid #fff;
+  border: 1px solid #666;
   display: flex;
   pointer-events: auto;
   color: white;
-}
-.panel {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
 }
 #inv-grid {
   display: grid;
-  grid-template-columns: repeat(9, 44px);
-  gap: 4px;
+  grid-template-columns: repeat(9, 48px);
+  gap: 6px;
+}
+
+canvas {
+  display: block;
+  image-rendering: pixelated;
 }

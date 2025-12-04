@@ -3,32 +3,37 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FullStackCraft v7 - God Hand</title>
+    <title>FullStackCraft v8 - High-End</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <div id="ui-layer">
       <div id="login-screen">
-        <h1>FullStackCraft v7</h1>
-        <p style="color: #f55; font-weight: bold">GOD HAND EDITION</p>
-        <p>Left Click = INSTANT DESTROY</p>
+        <h1>FullStackCraft v8</h1>
+        <p style="color: #88ccff">Procedural Textures & Physics Drops</p>
         <input
           type="text"
           id="room-input"
           placeholder="Room Name"
           value="world1"
         />
-        <button id="start-btn">Start Destruction</button>
+        <button id="start-btn">Enter World</button>
+        <p>Controls: WASD=Move, Click=Mine/Place, E=Inventory, 1-9=Select</p>
       </div>
       <div id="game-ui" style="display: none">
-        <div id="target-info">Target: None</div>
+        <div id="hud-top">
+          <span id="fps-counter">FPS: 60</span> |
+          <span id="biome-info">Biome: Plains</span>
+        </div>
         <div id="inventory-bar"></div>
+        <div id="health-container"><div id="health-bar"></div></div>
         <div id="inventory-screen" style="display: none">
           <div class="panel">
-            <h2>Inventory</h2>
+            <h2>Backpack</h2>
             <div id="inv-grid"></div>
           </div>
         </div>
+        <div id="mining-overlay" style="display: none"></div>
       </div>
     </div>
     <canvas id="game-canvas"></canvas>
