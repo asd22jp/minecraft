@@ -1,5 +1,5 @@
 /**
- * FullStackCraft v5 - Balanced for Fun & Playability
+ * FullStackCraft v6 - Fixed Camera & Mining Logic
  */
 
 const TILE_SIZE = 32;
@@ -7,14 +7,13 @@ const WORLD_WIDTH = 128;
 const WORLD_HEIGHT = 96;
 const GRAVITY = 0.5;
 
-// Balance Adjustments: Lower hardness for snappier gameplay
+// Balance Adjustments: Wood is much weaker now
 const BLOCKS = {
   0: { name: "Air", solid: false },
   1: {
     name: "Grass",
     color: "#5b8a36",
     solid: true,
-    type: "grass",
     hardness: 50,
     reqTool: "shovel",
   },
@@ -22,7 +21,6 @@ const BLOCKS = {
     name: "Dirt",
     color: "#704828",
     solid: true,
-    type: "noise",
     hardness: 60,
     reqTool: "shovel",
   },
@@ -30,7 +28,6 @@ const BLOCKS = {
     name: "Stone",
     color: "#666666",
     solid: true,
-    type: "noise",
     hardness: 200,
     reqTool: "pickaxe",
   },
@@ -38,7 +35,6 @@ const BLOCKS = {
     name: "Sand",
     color: "#dcc688",
     solid: true,
-    type: "noise",
     hardness: 50,
     reqTool: "shovel",
   },
@@ -46,59 +42,52 @@ const BLOCKS = {
     name: "Wood",
     color: "#5c3817",
     solid: true,
-    type: "wood",
-    hardness: 150,
+    hardness: 50,
     reqTool: "axe",
-  },
+  }, // Nerfed from 150 to 50
   6: {
     name: "Leaves",
     color: "#3a7a28",
     solid: true,
-    type: "leaves",
-    hardness: 20,
+    hardness: 10,
     reqTool: "none",
-  },
+  }, // Nerfed from 20 to 10
   11: {
     name: "CoalOre",
     color: "#333",
     solid: true,
-    type: "ore",
-    oreColor: "#000",
     hardness: 250,
     reqTool: "pickaxe",
+    oreColor: "#000",
   },
   13: {
     name: "IronOre",
     color: "#aaa",
     solid: true,
-    type: "ore",
-    oreColor: "#dca47e",
     hardness: 300,
     reqTool: "pickaxe",
+    oreColor: "#dca47e",
   },
   14: {
     name: "GoldOre",
     color: "#ddd",
     solid: true,
-    type: "ore",
-    oreColor: "#ffe84d",
     hardness: 400,
     reqTool: "pickaxe",
+    oreColor: "#ffe84d",
   },
   15: {
     name: "DiamondOre",
     color: "#777",
     solid: true,
-    type: "ore",
-    oreColor: "#00ffff",
     hardness: 600,
     reqTool: "pickaxe",
+    oreColor: "#00ffff",
   },
   21: {
     name: "Cobble",
     color: "#555",
     solid: true,
-    type: "brick",
     hardness: 200,
     reqTool: "pickaxe",
   },
@@ -106,16 +95,14 @@ const BLOCKS = {
     name: "Planks",
     color: "#a07040",
     solid: true,
-    type: "plank",
-    hardness: 100,
+    hardness: 50,
     reqTool: "axe",
   },
   31: {
     name: "CraftTable",
     color: "#852",
     solid: true,
-    type: "table",
-    hardness: 150,
+    hardness: 100,
     reqTool: "axe",
   },
   51: {
@@ -130,60 +117,28 @@ const BLOCKS = {
 
 const ITEMS = {
   0: { name: "Air", type: "none" },
-  1: { name: "Hand", type: "none", efficiency: 1.5, damage: 1 }, // Hand buffed
+  1: { name: "Hand", type: "none", efficiency: 2.0, damage: 1 }, // Hand Buffed
   2: {
     name: "WoodPick",
     type: "tool",
     toolType: "pickaxe",
-    efficiency: 3,
+    efficiency: 4,
     damage: 2,
     icon: "#855",
-  },
-  3: {
-    name: "StonePick",
-    type: "tool",
-    toolType: "pickaxe",
-    efficiency: 5,
-    damage: 3,
-    icon: "#777",
-  },
-  4: {
-    name: "IronPick",
-    type: "tool",
-    toolType: "pickaxe",
-    efficiency: 8,
-    damage: 4,
-    icon: "#aaa",
-  },
-  5: {
-    name: "DiaPick",
-    type: "tool",
-    toolType: "pickaxe",
-    efficiency: 15,
-    damage: 5,
-    icon: "#0ff",
   },
   6: {
     name: "WoodAxe",
     type: "tool",
     toolType: "axe",
-    efficiency: 3,
+    efficiency: 4,
     damage: 3,
     icon: "#855",
-  },
-  7: {
-    name: "StoneAxe",
-    type: "tool",
-    toolType: "axe",
-    efficiency: 5,
-    damage: 4,
-    icon: "#777",
   },
   10: {
     name: "Shovel",
     type: "tool",
     toolType: "shovel",
-    efficiency: 5,
+    efficiency: 4,
     damage: 2,
     icon: "#ccc",
   },
@@ -194,14 +149,6 @@ const ITEMS = {
     efficiency: 1,
     damage: 4,
     icon: "#855",
-  },
-  13: {
-    name: "IronSword",
-    type: "weapon",
-    toolType: "sword",
-    efficiency: 1,
-    damage: 6,
-    icon: "#aaa",
   },
 };
 
@@ -353,7 +300,6 @@ class Game {
     window.addEventListener("mousedown", (e) => {
       if (e.button === 0) {
         this.mouse.left = true;
-        this.startMining();
       }
       if (e.button === 2) {
         this.mouse.right = true;
@@ -365,7 +311,7 @@ class Game {
         this.mouse.left = false;
         this.mining.active = false;
         this.mining.progress = 0;
-        document.getElementById("mining-tip").style.display = "none";
+        document.getElementById("mining-status").innerText = "";
       }
       if (e.button === 2) this.mouse.right = false;
     });
@@ -391,6 +337,7 @@ class Game {
   }
 
   genAssets() {
+    // Simple Asset Generation
     for (let id in BLOCKS) {
       const b = BLOCKS[id];
       const c = document.createElement("canvas");
@@ -399,22 +346,18 @@ class Game {
       const ctx = c.getContext("2d");
       ctx.fillStyle = b.color || "#f0f";
       ctx.fillRect(0, 0, 32, 32);
-      if (b.type === "noise" || b.type === "ore") {
-        for (let i = 0; i < 40; i++) {
-          ctx.fillStyle =
-            Math.random() > 0.5 ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.1)";
-          ctx.fillRect(Math.random() * 32, Math.random() * 32, 2, 2);
-        }
-      }
       if (b.type === "wood") {
         ctx.fillStyle = "rgba(0,0,0,0.2)";
         ctx.fillRect(5, 0, 3, 32);
         ctx.fillRect(20, 0, 3, 32);
       }
-      if (b.type === "ore") {
+      if (b.type === "leaves") {
+        ctx.fillStyle = "rgba(0,0,0,0.1)";
+        ctx.fillRect(4, 4, 24, 24);
+      }
+      if (b.oreColor) {
         ctx.fillStyle = b.oreColor;
-        ctx.fillRect(10, 10, 6, 6);
-        ctx.fillRect(20, 15, 4, 4);
+        ctx.fillRect(10, 10, 8, 8);
       }
       this.assets.blocks[id] = c;
     }
@@ -440,9 +383,6 @@ class Game {
           ctx.beginPath();
           ctx.arc(0, 0, 6, 0, Math.PI * 2);
           ctx.fill();
-        } else if (item.toolType === "sword") {
-          ctx.fillRect(-2, -14, 4, 16);
-          ctx.fillRect(-6, 2, 12, 2);
         }
       }
       this.assets.items[id] = c;
@@ -463,16 +403,10 @@ class Game {
         else if (y > hMap[x]) {
           id = 3;
           if (y < hMap[x] + 4) id = 2;
-          if (id === 3 && Math.random() < 0.08) {
-            const r = Math.random();
-            if (r < 0.6) id = 11;
-            else if (r < 0.9) id = 13;
-            else if (r < 0.98) id = 14;
-            else id = 15;
-          }
+          if (id === 3 && Math.random() < 0.08) id = 11;
         } else if (y === hMap[x]) {
           id = 1;
-          if (x > 5 && x < WORLD_WIDTH - 5 && Math.random() < 0.08)
+          if (x > 5 && x < WORLD_WIDTH - 5 && Math.random() < 0.15)
             this.genTree(x, y - 1);
         }
         if (!this.world[idx] && id) this.world[idx] = id;
@@ -481,8 +415,9 @@ class Game {
   }
 
   genTree(x, y) {
-    for (let i = 0; i < 4; i++) this.world[(y - i) * WORLD_WIDTH + x] = 5;
-    for (let ly = y - 5; ly <= y - 3; ly++)
+    const h = 4 + Math.floor(Math.random() * 2);
+    for (let i = 0; i < h; i++) this.world[(y - i) * WORLD_WIDTH + x] = 5;
+    for (let ly = y - h - 1; ly <= y - h + 1; ly++)
       for (let lx = x - 2; lx <= x + 2; lx++)
         if (!this.world[ly * WORLD_WIDTH + lx])
           this.world[ly * WORLD_WIDTH + lx] = 6;
@@ -497,7 +432,9 @@ class Game {
         players: this.players,
         drops: this.drops,
       });
-    } else this.processMining();
+    }
+    // Client Side Mining Logic
+    this.processMining();
     this.render();
     requestAnimationFrame(() => this.loop());
   }
@@ -570,62 +507,61 @@ class Game {
     return b && b.solid;
   }
 
-  startMining() {
-    if (!this.players[this.net.myId]) return;
-    const mx = this.mouse.x + this.cam.x,
-      my = this.mouse.y + this.cam.y;
-    this.mining.bx = Math.floor(mx / 32);
-    this.mining.by = Math.floor(my / 32);
-    this.mining.active = true;
-    this.mining.progress = 0;
-
-    // Show tip
-    const t = document.getElementById("mining-tip");
-    t.style.display = "block";
-    setTimeout(() => (t.style.display = "none"), 2000);
-
-    this.tryAttack(); // Also try attack
-  }
-
+  // --- NEW MINING LOGIC ---
   processMining() {
-    if (!this.mining.active || !this.mouse.left) return;
-
-    // Simple radius check instead of strict equality to allow shaky hands
-    const mx = this.mouse.x + this.cam.x,
-      my = this.mouse.y + this.cam.y;
-    const bx = Math.floor(mx / 32),
-      by = Math.floor(my / 32);
-
-    // Allow if same block OR adjacent but very close to border (simple: just check index)
-    if (bx !== this.mining.bx || by !== this.mining.by) {
+    // If not holding left click, reset
+    if (!this.mouse.left) {
       this.mining.active = false;
-      this.mining.progress = 0;
       return;
     }
 
-    const bid = this.world[this.mining.by * WORLD_WIDTH + this.mining.bx];
-    if (bid === 0) {
+    const mx = this.mouse.x + this.cam.x;
+    const my = this.mouse.y + this.cam.y;
+    const bx = Math.floor(mx / 32);
+    const by = Math.floor(my / 32);
+
+    // Auto-switch target block logic (Minecraft style)
+    if (!this.mining.active || this.mining.bx !== bx || this.mining.by !== by) {
+      this.mining.bx = bx;
+      this.mining.by = by;
+      this.mining.active = true;
+      this.mining.progress = 0;
+    }
+
+    const bid = this.world[by * WORLD_WIDTH + bx];
+    if (!bid) {
       this.mining.active = false;
+      document.getElementById("mining-status").innerText = "";
       return;
     }
 
     const block = BLOCKS[bid];
-    const p = this.players[this.net.myId];
-    const tool = ITEMS[p.inv[this.selSlot]?.id] || ITEMS[0]; // 0=Air
+    if (block.unbreakable) return;
 
+    // Speed Calc
+    const p = this.players[this.net.myId];
+    const tool = ITEMS[p.inv[this.selSlot]?.id] || ITEMS[0];
     let speed = 1.0;
     if (block.reqTool === "none") {
       speed = 1.0;
     } else {
       if (tool.toolType === block.reqTool) speed = tool.efficiency;
-      else speed = 0.3; // Buffed from 0.1 to 0.3
+      else speed = 0.5; // Hand mining is now faster (was 0.3)
     }
-    if (block.unbreakable) speed = 0;
 
-    this.mining.progress += 16 * speed;
+    // Hand Buff against Wood
+    if (block.name === "Wood" && tool.type === "none") speed = 1.0;
+
+    this.mining.progress += 1.0 * speed; // Base speed per frame
+
+    // Status Update
+    const pct = Math.floor((this.mining.progress / block.hardness) * 100);
+    document.getElementById("mining-status").innerText = `Mining: ${pct}%`;
+
     if (this.mining.progress >= block.hardness) {
-      this.net.send({ type: "MINE", x: this.mining.bx, y: this.mining.by });
+      this.net.send({ type: "MINE", x: bx, y: by });
       this.mining.progress = 0;
+      // Keep active to allow chain mining
     }
   }
 
@@ -638,20 +574,6 @@ class Game {
       y: Math.floor(my / 32),
       slot: this.selSlot,
     });
-  }
-  tryAttack() {
-    const p = this.players[this.net.myId],
-      mx = this.mouse.x + this.cam.x,
-      my = this.mouse.y + this.cam.y;
-    for (let id in this.players) {
-      if (id === this.net.myId) continue;
-      const t = this.players[id];
-      if (Math.abs(t.x + 12 - mx) < 30 && Math.abs(t.y + 27 - my) < 40) {
-        this.net.send({ type: "ATTACK", targetId: id });
-        t.flash = 10;
-        return;
-      }
-    }
   }
 
   spawnPlayer(id, x, y) {
@@ -668,9 +590,13 @@ class Game {
     if (id === this.net.myId) {
       const inv = this.players[id].inv;
       inv[0] = { id: 2, count: 1 };
-      inv[1] = { id: 10, count: 1 };
-      inv[2] = { id: 6, count: 1 }; // Tools
+      inv[1] = { id: 6, count: 1 };
+      inv[2] = { id: 10, count: 1 }; // Pick, Axe, Shovel
       this.updateUI();
+
+      // Set Camera immediately to player
+      this.cam.x = x - this.width / 2;
+      this.cam.y = y - this.height / 2;
     }
   }
   giveItem(pid, id, n) {
@@ -711,7 +637,6 @@ class Game {
         const b = BLOCKS[this.world[msg.y * WORLD_WIDTH + msg.x]];
         if (b && !b.unbreakable) {
           this.world[msg.y * WORLD_WIDTH + msg.x] = 0;
-          // Find item ID: Simple mapping
           let did = parseInt(Object.keys(BLOCKS).find((k) => BLOCKS[k] === b));
           if (b.name === "Stone") did = 21;
           if (b.name === "Grass") did = 2;
@@ -734,21 +659,6 @@ class Game {
           });
         }
       }
-      if (msg.type === "ATTACK") {
-        const p = this.players[sender],
-          t = this.players[msg.targetId];
-        if (p && t) {
-          const d = ITEMS[p.inv[p.selSlot]?.id]?.damage || 1;
-          t.hp -= d;
-          t.vx = t.x - p.x > 0 ? 8 : -8;
-          t.vy = -4;
-          if (t.hp <= 0) {
-            t.hp = 20;
-            t.x = 64 * 32;
-            t.y = 10 * 32;
-          }
-        }
-      }
     }
   }
 
@@ -761,8 +671,11 @@ class Game {
   render() {
     if (!this.players[this.net.myId]) return;
     const p = this.players[this.net.myId];
-    this.cam.x += (p.x - this.width / 2 - this.cam.x) * 0.1;
-    this.cam.y += (p.y - this.height / 2 - this.cam.y) * 0.1;
+
+    // --- FIXED CAMERA (No more Lag/Drift) ---
+    // Just directly lock camera to player with simple offset
+    this.cam.x = p.x - this.width / 2;
+    this.cam.y = p.y - this.height / 2;
 
     const g = this.ctx.createLinearGradient(0, 0, 0, this.height);
     g.addColorStop(0, "#87CEEB");
@@ -782,25 +695,15 @@ class Game {
         if (id !== 0 && this.assets.blocks[id]) {
           const px = Math.floor(x * 32 - this.cam.x),
             py = Math.floor(y * 32 - this.cam.y);
-          // Mining Flash Effect
+          this.ctx.drawImage(this.assets.blocks[id], px, py);
+          // Mining Overlay
           if (
             this.mining.active &&
             this.mining.bx === x &&
             this.mining.by === y
           ) {
-            this.ctx.save();
-            this.ctx.globalAlpha = 0.5 + Math.sin(Date.now() / 50) * 0.2;
-            this.ctx.drawImage(this.assets.blocks[id], px, py);
-            this.ctx.restore();
-            // Progress Bar
-            const b = BLOCKS[id];
-            const pct = Math.min(1, this.mining.progress / b.hardness);
-            this.ctx.fillStyle = "#000";
-            this.ctx.fillRect(px + 4, py + 12, 24, 6);
-            this.ctx.fillStyle = pct < 0.5 ? "#ff0" : "#0f0";
-            this.ctx.fillRect(px + 5, py + 13, 22 * pct, 4);
-          } else {
-            this.ctx.drawImage(this.assets.blocks[id], px, py);
+            this.ctx.fillStyle = "rgba(255,255,255,0.4)";
+            this.ctx.fillRect(px, py, 32, 32);
           }
         }
       }
@@ -812,13 +715,8 @@ class Game {
       const ply = this.players[id];
       const px = ply.x - this.cam.x,
         py = ply.y - this.cam.y;
-      if (ply.flash) {
-        this.ctx.globalAlpha = 0.5;
-        ply.flash--;
-      }
       this.ctx.fillStyle = id === this.net.myId ? "#fff" : "#ccc";
       this.ctx.fillRect(px, py, 24, 54);
-      this.ctx.globalAlpha = 1.0;
       const iid = ply.inv[ply.selSlot || 0]?.id;
       if (iid && (this.assets.items[iid] || this.assets.blocks[iid])) {
         this.ctx.save();
