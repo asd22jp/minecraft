@@ -1,17 +1,16 @@
 /**
- * FullStackCraft v16 - Nature Fix (Trees Everywhere!)
+ * FullStackCraft v14 - The Universe Update
+ * 65+ Items, Biomes, Day/Night, Save System
  */
 
-const TILE_SIZE = 60;
+const TILE_SIZE = 48;
 const CHUNK_SIZE = 16;
-const GRAVITY = 0.6;
-const TERMINAL_VELOCITY = 15;
-const PLAYER_WIDTH = 40;
-const PLAYER_HEIGHT = 56;
+const GRAVITY = 0.5;
 
-// --- DEFINITIONS ---
+// --- ID DEFINITIONS (1-99 Blocks, 100+ Tools, 200+ Items) ---
 const BLOCKS = {
   0: { name: "Air", solid: false },
+  // Nature
   1: { name: "Grass", color: "#5b8a36", solid: true, hardness: 50, drop: 2 },
   2: { name: "Dirt", color: "#704828", solid: true, hardness: 50, drop: 2 },
   3: {
@@ -71,6 +70,7 @@ const BLOCKS = {
     drop: 12,
     type: "noise",
   },
+  // Ores
   15: {
     name: "CoalOre",
     color: "#333",
@@ -111,15 +111,61 @@ const BLOCKS = {
     oreColor: "#00e5ff",
     drop: 204,
   },
-  21: {
-    name: "Cobble",
-    color: "#555",
+  19: {
+    name: "EmeraldOre",
+    color: "#0f0",
     solid: true,
-    hardness: 400,
-    type: "brick",
-    reqTool: "pickaxe",
-    drop: 21,
+    hardness: 500,
+    req: "pick",
+    type: "ore",
+    oreColor: "#00e676",
+    drop: 205,
   },
+  20: {
+    name: "RubyOre",
+    color: "#f00",
+    solid: true,
+    hardness: 600,
+    req: "pick",
+    type: "ore",
+    oreColor: "#d50000",
+    drop: 206,
+  },
+  // Wood Types
+  25: {
+    name: "BirchLog",
+    color: "#f5f5f5",
+    solid: true,
+    hardness: 150,
+    req: "axe",
+    drop: 25,
+    type: "column",
+    detail: "#333",
+  },
+  26: {
+    name: "BirchLeaves",
+    color: "#8bc34a",
+    solid: true,
+    hardness: 10,
+    drop: 200,
+  },
+  27: {
+    name: "SpruceLog",
+    color: "#3e2723",
+    solid: true,
+    hardness: 150,
+    req: "axe",
+    drop: 27,
+    type: "column",
+  },
+  28: {
+    name: "SpruceLeaves",
+    color: "#1b5e20",
+    solid: true,
+    hardness: 10,
+    drop: 200,
+  },
+  // Construction
   30: {
     name: "OakPlank",
     color: "#8d6e63",
@@ -130,14 +176,104 @@ const BLOCKS = {
     type: "plank",
   },
   31: {
-    name: "CraftTable",
-    color: "#a1887f",
+    name: "BirchPlank",
+    color: "#fff9c4",
+    solid: true,
+    hardness: 100,
+    req: "axe",
+    drop: 31,
+    type: "plank",
+  },
+  32: {
+    name: "SprucePlank",
+    color: "#4e342e",
+    solid: true,
+    hardness: 100,
+    req: "axe",
+    drop: 32,
+    type: "plank",
+  },
+  33: {
+    name: "Cobble",
+    color: "#616161",
     solid: true,
     hardness: 200,
-    type: "table",
-    reqTool: "axe",
-    drop: 31,
+    req: "pick",
+    drop: 33,
+    type: "brick",
   },
+  34: {
+    name: "Brick",
+    color: "#d84315",
+    solid: true,
+    hardness: 200,
+    req: "pick",
+    drop: 34,
+    type: "brick",
+  },
+  35: {
+    name: "Glass",
+    color: "rgba(255,255,255,0.3)",
+    solid: true,
+    hardness: 10,
+    drop: 0,
+    type: "glass",
+  },
+  36: {
+    name: "Sandstone",
+    color: "#ffecb3",
+    solid: true,
+    hardness: 150,
+    req: "pick",
+    drop: 36,
+    type: "brick",
+  },
+  // Functional
+  40: {
+    name: "CraftTable",
+    color: "#795548",
+    solid: true,
+    hardness: 150,
+    req: "axe",
+    drop: 40,
+    type: "table",
+  },
+  41: {
+    name: "Furnace",
+    color: "#424242",
+    solid: true,
+    hardness: 200,
+    req: "pick",
+    drop: 41,
+    type: "front",
+    face: "#000",
+  },
+  42: {
+    name: "Chest",
+    color: "#ffb74d",
+    solid: true,
+    hardness: 150,
+    req: "axe",
+    drop: 42,
+    type: "box",
+  },
+  43: {
+    name: "TNT",
+    color: "#ff1744",
+    solid: true,
+    hardness: 50,
+    drop: 43,
+    type: "tnt",
+  },
+  44: {
+    name: "Torch",
+    color: "#ffeb3b",
+    solid: false,
+    hardness: 1,
+    drop: 44,
+    type: "torch",
+  },
+
   99: {
     name: "Bedrock",
     color: "#000",
@@ -150,6 +286,8 @@ const BLOCKS = {
 const ITEMS = {
   0: { name: "Air" },
   1: { name: "Hand", power: 1.0 },
+
+  // Tools
   100: {
     name: "WoodPick",
     power: 3,
@@ -162,8 +300,44 @@ const ITEMS = {
     power: 5,
     type: "tool",
     toolType: "pick",
-    iconColor: "#757575",
+    iconColor: "#616161",
   },
+  102: {
+    name: "IronPick",
+    power: 8,
+    type: "tool",
+    toolType: "pick",
+    iconColor: "#bdbdbd",
+  },
+  103: {
+    name: "GoldPick",
+    power: 12,
+    type: "tool",
+    toolType: "pick",
+    iconColor: "#ffca28",
+  },
+  104: {
+    name: "DiaPick",
+    power: 20,
+    type: "tool",
+    toolType: "pick",
+    iconColor: "#00e5ff",
+  },
+  105: {
+    name: "EmeraldPick",
+    power: 25,
+    type: "tool",
+    toolType: "pick",
+    iconColor: "#00e676",
+  },
+  106: {
+    name: "RubyPick",
+    power: 30,
+    type: "tool",
+    toolType: "pick",
+    iconColor: "#d50000",
+  },
+
   110: {
     name: "WoodAxe",
     power: 3,
@@ -178,94 +352,155 @@ const ITEMS = {
     toolType: "shovel",
     iconColor: "#8d6e63",
   },
-  130: {
-    name: "WoodSword",
-    power: 4,
-    type: "weapon",
-    toolType: "sword",
-    iconColor: "#8d6e63",
-  },
-  200: { name: "Stick", type: "item", iconColor: "#8d6e63" },
-  201: { name: "Coal", type: "item", iconColor: "#333" },
-  202: { name: "Iron", type: "item", iconColor: "#ccc" },
-  203: { name: "Gold", type: "item", iconColor: "#ff0" },
-  204: { name: "Diamond", type: "item", iconColor: "#0ff" },
+  130: { name: "WoodSword", power: 4, type: "weapon", iconColor: "#8d6e63" },
+
+  // Materials
+  200: { name: "Stick", iconColor: "#5d4037", type: "mat" },
+  201: { name: "Coal", iconColor: "#212121", type: "mat" },
+  202: { name: "IronIngot", iconColor: "#bdbdbd", type: "mat" },
+  203: { name: "GoldIngot", iconColor: "#ffca28", type: "mat" },
+  204: { name: "Diamond", iconColor: "#00e5ff", type: "mat" },
+  205: { name: "Emerald", iconColor: "#00e676", type: "mat" },
+  206: { name: "Ruby", iconColor: "#d50000", type: "mat" },
+  210: { name: "Apple", iconColor: "#f44336", type: "food" },
 };
 
 const RECIPES = [
+  // Planks
   { in: [4], out: { id: 30, count: 4 }, shapeless: true },
+  { in: [25], out: { id: 31, count: 4 }, shapeless: true },
+  { in: [27], out: { id: 32, count: 4 }, shapeless: true },
+  // Stick
   { in: [30, 30], out: { id: 200, count: 4 }, shapeless: true },
-  { pattern: [30, 30, 0, 30, 30, 0, 0, 0, 0], out: { id: 31, count: 1 } },
+  // Table
+  { pattern: [30, 30, 0, 30, 30, 0, 0, 0, 0], out: { id: 40, count: 1 } },
+  // Tools (Wood)
   { pattern: [30, 30, 30, 0, 200, 0, 0, 200, 0], out: { id: 100, count: 1 } },
-  { pattern: [21, 21, 21, 0, 200, 0, 0, 200, 0], out: { id: 101, count: 1 } },
   { pattern: [30, 30, 0, 30, 200, 0, 0, 200, 0], out: { id: 110, count: 1 } },
+  // Furnace
+  { pattern: [33, 33, 33, 33, 0, 33, 33, 33, 33], out: { id: 41, count: 1 } },
+  // Torch
+  { in: [201, 200], out: { id: 44, count: 4 }, shapeless: true },
 ];
 
+// --- GRAPHICS ---
 class AssetGen {
   static gen(id) {
     const c = document.createElement("canvas");
-    c.width = 64;
-    c.height = 64;
+    c.width = 32;
+    c.height = 32;
     const ctx = c.getContext("2d");
+    // Fallback
     ctx.fillStyle = "#f0f";
-    ctx.fillRect(0, 0, 64, 64); // Fallback
+    ctx.fillRect(0, 0, 32, 32);
+
     if (BLOCKS[id]) {
       const b = BLOCKS[id];
       ctx.fillStyle = b.color;
-      ctx.fillRect(0, 0, 64, 64);
+      ctx.fillRect(0, 0, 32, 32);
+      // Texture effects
       ctx.fillStyle = "rgba(255,255,255,0.1)";
-      if (b.type === "noise" || b.type === "ore")
-        for (let i = 0; i < 40; i++)
-          ctx.fillRect(Math.random() * 64, Math.random() * 64, 4, 4);
-      if (b.type === "brick") {
-        ctx.strokeStyle = "rgba(0,0,0,0.2)";
-        ctx.lineWidth = 2;
-        ctx.strokeRect(0, 0, 64, 64);
-        ctx.strokeRect(0, 32, 64, 2);
+      if (b.type === "noise" || b.type === "grass" || b.type === "ore") {
+        for (let i = 0; i < 30; i++)
+          ctx.fillRect(Math.random() * 32, Math.random() * 32, 2, 2);
+      }
+      if (b.type === "grass") {
+        ctx.fillStyle = "#43a047";
+        ctx.fillRect(0, 0, 32, 8);
       }
       if (b.type === "column") {
+        // Logs
         ctx.fillStyle = "rgba(0,0,0,0.2)";
-        ctx.fillRect(8, 0, 8, 64);
-        ctx.fillRect(48, 0, 8, 64);
+        ctx.fillRect(4, 0, 4, 32);
+        ctx.fillRect(24, 0, 4, 32);
+        if (b.detail) {
+          ctx.fillStyle = b.detail;
+          for (let i = 0; i < 5; i++)
+            ctx.fillRect(Math.random() * 32, Math.random() * 32, 4, 1);
+        }
+      }
+      if (b.type === "plank") {
+        ctx.fillStyle = "rgba(0,0,0,0.1)";
+        ctx.fillRect(0, 8, 32, 2);
+        ctx.fillRect(0, 24, 32, 2);
+      }
+      if (b.type === "brick") {
+        ctx.strokeStyle = "rgba(200,200,200,0.3)";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(0, 0, 32, 32);
+        ctx.strokeRect(16, 0, 1, 32);
+        ctx.strokeRect(0, 16, 32, 1);
+      }
+      if (b.type === "glass") {
+        ctx.strokeStyle = "rgba(255,255,255,0.8)";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(2, 2, 28, 28);
+        ctx.beginPath();
+        ctx.moveTo(8, 8);
+        ctx.lineTo(16, 16);
+        ctx.stroke();
       }
       if (b.type === "ore") {
         ctx.fillStyle = b.oreColor;
-        ctx.fillRect(20, 20, 24, 24);
+        ctx.fillRect(10, 10, 12, 12);
+        ctx.fillRect(4, 20, 6, 6);
+      }
+      if (b.type === "table") {
+        ctx.fillStyle = "#8d6e63";
+        ctx.fillRect(0, 0, 32, 32);
+        ctx.fillStyle = "#5d4037";
+        ctx.fillRect(2, 2, 28, 28);
+      }
+      if (b.type === "tnt") {
+        ctx.fillStyle = "#d32f2f";
+        ctx.fillRect(0, 0, 32, 32);
+        ctx.fillStyle = "#fff";
+        ctx.font = "10px Arial";
+        ctx.fillText("TNT", 6, 20);
+      }
+      if (b.type === "torch") {
+        ctx.clearRect(0, 0, 32, 32);
+        ctx.fillStyle = "#5d4037";
+        ctx.fillRect(14, 10, 4, 14);
+        ctx.fillStyle = "#ffeb3b";
+        ctx.fillRect(12, 6, 8, 8);
       }
     } else if (ITEMS[id]) {
-      ctx.clearRect(0, 0, 64, 64);
       const it = ITEMS[id];
-      ctx.fillStyle = it.iconColor || "#fff";
-      if (it.type === "tool") {
-        ctx.translate(32, 32);
+      ctx.clearRect(0, 0, 32, 32);
+      if (it.type === "tool" || it.type === "weapon") {
+        ctx.translate(16, 16);
         ctx.rotate(-Math.PI / 4);
         ctx.fillStyle = "#5d4037";
-        ctx.fillRect(-4, 0, 8, 32);
+        ctx.fillRect(-2, 0, 4, 14);
         ctx.fillStyle = it.iconColor;
         if (it.toolType === "pick") {
           ctx.beginPath();
-          ctx.arc(0, -4, 20, Math.PI, 0);
-          ctx.lineTo(0, 8);
+          ctx.arc(0, -2, 10, Math.PI, 0);
+          ctx.lineTo(0, 4);
           ctx.fill();
         }
-        if (it.toolType === "axe") ctx.fillRect(-12, -16, 24, 20);
+        if (it.toolType === "axe") ctx.fillRect(-6, -8, 12, 10);
         if (it.toolType === "shovel") {
           ctx.beginPath();
-          ctx.arc(0, 0, 12, 0, Math.PI * 2);
+          ctx.arc(0, 0, 6, 0, Math.PI * 2);
           ctx.fill();
         }
-      } else {
+      } else if (it.type === "mat") {
+        ctx.fillStyle = it.iconColor;
         if (id == 200) {
           ctx.rotate(-Math.PI / 4);
           ctx.fillStyle = "#5d4037";
-          ctx.fillRect(20, 20, 8, 32);
-        } else ctx.fillRect(16, 16, 32, 32);
+          ctx.fillRect(14, 10, 4, 20);
+        } // Stick
+        else ctx.fillRect(8, 8, 16, 16);
       }
     }
     return c;
   }
 }
 
+// --- GAME LOGIC ---
 class Game {
   constructor() {
     this.canvas = document.getElementById("game-canvas");
@@ -277,6 +512,7 @@ class Game {
     this.players = {};
     this.drops = [];
     this.net = new Network(this);
+    this.time = 0; // 0-24000
 
     this.keys = {};
     this.mouse = { x: 0, y: 0, left: false };
@@ -287,11 +523,6 @@ class Game {
     this.craftGrid = Array(9).fill({ id: 0, count: 0 });
     this.craftResult = { id: 0, count: 0 };
     this.selInvSlot = -1;
-
-    this.profile = {
-      name: "Player",
-      skin: { head: "#ffccaa", body: "#3366cc", legs: "#333333" },
-    };
 
     this.assets = {};
     this.loadAssets();
@@ -333,12 +564,6 @@ class Game {
     };
 
     document.getElementById("start-btn").onclick = () => {
-      this.profile.name =
-        document.getElementById("nick-input").value || "Player";
-      this.profile.skin.head = document.getElementById("col-head").value;
-      this.profile.skin.body = document.getElementById("col-body").value;
-      this.profile.skin.legs = document.getElementById("col-legs").value;
-
       document.getElementById("login-screen").style.display = "none";
       document.getElementById("game-ui").style.display = "block";
       this.net.join(document.getElementById("room-input").value);
@@ -348,16 +573,9 @@ class Game {
   }
 
   start() {
-    // ★ Spawn in a Forest/Plains area to ensure trees
-    this.spawn(1000, -200);
-    this.net.send({
-      type: "PROFILE",
-      id: this.net.myId,
-      profile: this.profile,
-    });
+    this.spawn(0, -200);
     this.loop();
   }
-
   spawn(x, y) {
     this.players[this.net.myId] = {
       id: this.net.myId,
@@ -367,8 +585,7 @@ class Game {
       vy: 0,
       hp: 20,
       maxHp: 20,
-      inv: Array.from({ length: 27 }, () => ({ id: 0, count: 0 })),
-      profile: this.profile,
+      inv: Array(27).fill({ id: 0, count: 0 }),
     };
     this.cam.x = x;
     this.cam.y = y;
@@ -377,6 +594,8 @@ class Game {
 
   loop() {
     if (this.net.isHost) {
+      this.time = (this.time + 1) % 24000;
+      // Chunk Gen
       for (let id in this.players) {
         const p = this.players[id];
         const cx = Math.floor(p.x / TILE_SIZE / CHUNK_SIZE),
@@ -389,6 +608,7 @@ class Game {
         type: "SYNC",
         players: this.players,
         drops: this.drops,
+        time: this.time,
       });
     }
     this.processMining();
@@ -396,6 +616,7 @@ class Game {
     requestAnimationFrame(() => this.loop());
   }
 
+  // --- WORLD GEN ---
   getChunk(cx, cy) {
     const k = `${cx},${cy}`;
     if (this.chunks[k]) return this.chunks[k];
@@ -407,59 +628,69 @@ class Game {
     }
     return null;
   }
-
-  // ★ FIXED: Tree Generation in Chunk
   genChunk(cx, cy) {
     const d = new Uint8Array(CHUNK_SIZE * CHUNK_SIZE);
     for (let x = 0; x < CHUNK_SIZE; x++) {
       const wx = cx * CHUNK_SIZE + x;
-      // Biome: mostly plains/forest for now to guarantee trees
+      // Biome Noise
+      const biome = Math.sin(wx * 0.01); // < -0.3 Snow, > 0.3 Desert, else Plains/Forest
+
+      let hBase = 40;
+      if (biome > 0.3) hBase = 35; // Desert lower
+      else if (biome < -0.3) hBase = 50; // Mountains
+
       const h = Math.floor(
-        40 + Math.sin(wx * 0.05) * 10 + Math.sin(wx * 0.01) * 20
+        hBase + Math.sin(wx * 0.05) * 10 + Math.sin(wx * 0.01) * 20
       );
 
       for (let y = 0; y < CHUNK_SIZE; y++) {
         const wy = cy * CHUNK_SIZE + y;
         let id = 0;
-        if (wy > 80) id = 99; // Bedrock
+        if (wy > 80) id = 7; // Bedrock
         else if (wy > h) {
-          id = 3;
-          if (wy < h + 4) id = 2;
-        } else if (wy === h) {
-          id = 1; // Grass
-          // Tree Chance (Higher!)
-          if (Math.random() < 0.15) {
-            // Place Trunk directly in this column
-            for (let i = 1; i <= 4; i++) {
-              const ty = y - i;
-              if (ty >= 0) d[ty * CHUNK_SIZE + x] = 4; // Oak Log
-            }
-            // Queue leaves (needs neighboring chunks or careful placement)
-            // Simplified: Only place leaves if they fit in current chunk for v16 stability
-            // Better: Use delayed setBlock for leaves to handle cross-chunk
-            this.queueLeaves(wx, wy - 4);
+          id = 3; // Stone
+          if (wy < h + 4) {
+            if (biome > 0.3) id = 7; // Sand
+            else if (biome < -0.3) id = 9; // Snow Block
+            else id = 2; // Dirt
           }
+          // Ores
+          if (id === 3) {
+            const r = Math.random();
+            if (r < 0.05) id = 15; // Coal
+            else if (r < 0.02) id = 16; // Iron
+            else if (r < 0.005) id = 18; // Diamond
+            else if (r < 0.002) id = 20; // Ruby
+          }
+        } else if (wy === h) {
+          if (biome > 0.3) id = 7; // Sand
+          else if (biome < -0.3) id = 9; // Snow
+          else id = 1; // Grass
+
+          // Surface Features
+          if (id === 1 && Math.random() < 0.05)
+            this.queueTree(wx, wy - 1, Math.random() > 0.5 ? 4 : 25); // Oak or Birch
+          if (id === 7 && Math.random() < 0.02) {
+            d[(y - 1) * CHUNK_SIZE + x] = 8;
+            d[(y - 2) * CHUNK_SIZE + x] = 8;
+          } // Cactus
+        } else if (wy > 55 && biome > 0.3) {
+          // Underground Water in desert
+          // Skipped for simplicity
         }
         if (d[y * CHUNK_SIZE + x] === 0) d[y * CHUNK_SIZE + x] = id;
       }
     }
     return d;
   }
-
-  // ★ NEW: Reliable Leaf Placement
-  queueLeaves(gx, gy) {
-    // Place leaves in a 3x3 or 5x5 area around the top
-    // Delay slightly to ensure trunk is set and neighbors might exist
+  queueTree(gx, gy, type) {
     setTimeout(() => {
-      for (let ly = gy - 2; ly <= gy + 1; ly++) {
-        for (let lx = gx - 2; lx <= gx + 2; lx++) {
-          // Don't overwrite solid blocks
-          if (!this.isSolid(lx * TILE_SIZE, ly * TILE_SIZE)) {
-            this.setBlock(lx, ly, 5); // Leaves
-          }
-        }
-      }
-    }, 50);
+      for (let i = 0; i < 5; i++) this.setBlock(gx, gy - i, type);
+      const leaf = type === 4 ? 5 : 26;
+      for (let y = gy - 6; y <= gy - 3; y++)
+        for (let x = gx - 2; x <= gx + 2; x++)
+          if (!this.getBlock(x, y)) this.setBlock(x, y, leaf);
+    }, 10);
   }
 
   setBlock(gx, gy, id) {
@@ -486,6 +717,7 @@ class Game {
       : 0;
   }
 
+  // --- MINING & INTERACT ---
   processMining() {
     if (!this.mouse.left) {
       this.mining.active = false;
@@ -525,15 +757,13 @@ class Game {
 
     if (this.mining.progress >= block.hardness) {
       this.setBlock(bx, by, 0);
-      let did = BLOCKS[id].drop || id;
-      if (did)
-        this.drops.push({
-          x: bx * TILE_SIZE + TILE_SIZE / 2,
-          y: by * TILE_SIZE + TILE_SIZE / 2,
-          id: did,
-          vx: (Math.random() - 0.5) * 4,
-          vy: -4,
-        });
+      this.drops.push({
+        x: bx * TILE_SIZE + 24,
+        y: by * TILE_SIZE + 24,
+        id: block.drop || id,
+        vx: (Math.random() - 0.5) * 4,
+        vy: -4,
+      });
       this.net.send({ type: "MINE", x: bx, y: by });
       this.mining.progress = 0;
     }
@@ -542,18 +772,14 @@ class Game {
   phys() {
     for (let id in this.players) {
       const p = this.players[id];
-      p.vx *= 0.9;
-      if (Math.abs(p.vx) < 0.1) p.vx = 0;
-      if (p.vx > 8) p.vx = 8;
-      if (p.vx < -8) p.vx = -8;
-      p.x += p.vx;
-      this.resolveCollision(p, "x");
       p.vy += GRAVITY;
-      if (p.vy > TERMINAL_VELOCITY) p.vy = TERMINAL_VELOCITY;
+      p.x += p.vx;
+      this.collide(p, "x");
       p.y += p.vy;
-      this.resolveCollision(p, "y");
+      this.collide(p, "y");
+      p.vx *= 0.8;
       if (p.y > 3000) {
-        p.x = 1000;
+        p.x = 0;
         p.y = -200;
         p.vy = 0;
       }
@@ -563,17 +789,14 @@ class Game {
       d.vy += GRAVITY;
       d.y += d.vy;
       d.x += d.vx;
-      if (this.isSolid(d.x, d.y + 10)) {
-        d.y = Math.floor(d.y / TILE_SIZE) * TILE_SIZE - 10;
+      if (this.isSolid(d.x, d.y + 16)) {
+        d.y = Math.floor(d.y / TILE_SIZE) * TILE_SIZE + 16;
         d.vy = 0;
         d.vx *= 0.8;
       }
       for (let pid in this.players) {
         const p = this.players[pid];
-        if (
-          Math.abs(p.x + PLAYER_WIDTH / 2 - d.x) < 40 &&
-          Math.abs(p.y + PLAYER_HEIGHT / 2 - d.y) < 40
-        ) {
+        if (Math.hypot(p.x - d.x, p.y - d.y) < 40) {
           this.giveItem(pid, d.id, 1);
           this.drops.splice(i, 1);
           break;
@@ -581,54 +804,30 @@ class Game {
       }
     }
   }
-
-  resolveCollision(p, axis) {
-    const minX = Math.floor(p.x / TILE_SIZE);
-    const maxX = Math.floor((p.x + PLAYER_WIDTH - 0.1) / TILE_SIZE);
-    const minY = Math.floor(p.y / TILE_SIZE);
-    const maxY = Math.floor((p.y + PLAYER_HEIGHT - 0.1) / TILE_SIZE);
-    if (axis === "x") {
-      if (
-        p.vx > 0 &&
-        (this.isSolidTile(maxX, minY) || this.isSolidTile(maxX, maxY))
-      ) {
-        p.x = maxX * TILE_SIZE - PLAYER_WIDTH;
-        p.vx = 0;
-      } else if (
-        p.vx < 0 &&
-        (this.isSolidTile(minX, minY) || this.isSolidTile(minX, maxY))
-      ) {
-        p.x = (minX + 1) * TILE_SIZE;
-        p.vx = 0;
-      }
-    } else {
-      if (
-        p.vy > 0 &&
-        (this.isSolidTile(minX, maxY) || this.isSolidTile(maxX, maxY))
-      ) {
-        p.y = maxY * TILE_SIZE - PLAYER_HEIGHT;
-        p.vy = 0;
-        p.grounded = true;
-      } else if (
-        p.vy < 0 &&
-        (this.isSolidTile(minX, minY) || this.isSolidTile(maxX, minY))
-      ) {
-        p.y = (minY + 1) * TILE_SIZE;
-        p.vy = 0;
-      } else if (p.vy > 0) p.grounded = false;
-    }
-  }
-  isSolidTile(tx, ty) {
-    const id = this.getBlock(tx, ty);
-    return id && BLOCKS[id].solid;
+  collide(e, ax) {
+    const x1 = Math.floor(e.x / TILE_SIZE),
+      y1 = Math.floor(e.y / TILE_SIZE);
+    const x2 = Math.floor((e.x + 24) / TILE_SIZE),
+      y2 = Math.floor((e.y + 54) / TILE_SIZE);
+    for (let y = y1; y <= y2; y++)
+      for (let x = x1; x <= x2; x++)
+        if (this.isSolid(x * TILE_SIZE, y * TILE_SIZE)) {
+          if (ax === "x") {
+            e.x = e.vx > 0 ? x * TILE_SIZE - 24.1 : (x + 1) * TILE_SIZE + 0.1;
+            e.vx = 0;
+          } else {
+            e.y = e.vy > 0 ? y * TILE_SIZE - 54.1 : (y + 1) * TILE_SIZE + 0.1;
+            e.vy = 0;
+          }
+        }
   }
   isSolid(x, y) {
-    return this.isSolidTile(
+    const id = this.getBlock(
       Math.floor(x / TILE_SIZE),
       Math.floor(y / TILE_SIZE)
     );
+    return id && BLOCKS[id].solid;
   }
-
   giveItem(pid, id, n) {
     const p = this.players[pid];
     for (let i = 0; i < 27; i++)
@@ -648,14 +847,13 @@ class Game {
   render() {
     if (!this.players[this.net.myId]) return;
     const p = this.players[this.net.myId];
-    this.cam.x += (p.x + PLAYER_WIDTH / 2 - this.width / 2 - this.cam.x) * 0.1;
-    this.cam.y +=
-      (p.y + PLAYER_HEIGHT / 2 - this.height / 2 - this.cam.y) * 0.1;
+    this.cam.x += (p.x - this.width / 2 - this.cam.x) * 0.1;
+    this.cam.y += (p.y - this.height / 2 - this.cam.y) * 0.1;
 
-    const g = this.ctx.createLinearGradient(0, 0, 0, this.height);
-    g.addColorStop(0, "#87CEEB");
-    g.addColorStop(1, "#B2EBF2");
-    this.ctx.fillStyle = g;
+    // Day/Night Cycle
+    const light = Math.max(0.1, Math.sin(this.time * 0.0005));
+    const sky = `rgb(${135 * light}, ${206 * light}, ${235 * light})`;
+    this.ctx.fillStyle = sky;
     this.ctx.fillRect(0, 0, this.width, this.height);
 
     const scx = Math.floor(this.cam.x / TILE_SIZE),
@@ -674,6 +872,7 @@ class Game {
           );
       }
 
+    // Mining overlay
     if (this.mining.active) {
       this.ctx.fillStyle = "rgba(255,255,255,0.2)";
       this.ctx.fillRect(
@@ -685,10 +884,9 @@ class Game {
     }
 
     this.drops.forEach((d) => {
-      const i = this.assets[d.id] || this.assets[1];
-      if (i)
+      if (this.assets[d.id])
         this.ctx.drawImage(
-          i,
+          this.assets[d.id],
           d.x - this.cam.x - 10,
           d.y - this.cam.y - 10,
           20,
@@ -698,30 +896,27 @@ class Game {
 
     for (let id in this.players) {
       const ply = this.players[id];
-      const px = ply.x - this.cam.x,
-        py = ply.y - this.cam.y;
-      const skin = ply.profile
-        ? ply.profile.skin
-        : { head: "#ffccaa", body: "#3366cc", legs: "#333333" };
-      this.ctx.fillStyle = skin.head;
-      this.ctx.fillRect(px + 8, py, 24, 24);
-      this.ctx.fillStyle = skin.body;
-      this.ctx.fillRect(px + 4, py + 24, 32, 20);
-      this.ctx.fillStyle = skin.legs;
-      this.ctx.fillRect(px + 8, py + 44, 10, 12);
-      this.ctx.fillRect(px + 22, py + 44, 10, 12);
-      this.ctx.fillStyle = "#fff";
-      this.ctx.font = "12px Arial";
-      this.ctx.textAlign = "center";
-      const name = ply.profile ? ply.profile.name : "Player";
-      this.ctx.fillText(name, px + PLAYER_WIDTH / 2, py - 5);
-      this.ctx.textAlign = "left";
+      this.ctx.fillStyle = id === this.net.myId ? "#fff" : "#ccc";
+      this.ctx.fillRect(ply.x - this.cam.x, ply.y - this.cam.y, 24, 54);
     }
 
+    // Night Overlay
+    this.ctx.fillStyle = `rgba(0,0,0,${0.8 - light * 0.8})`;
+    this.ctx.fillRect(0, 0, this.width, this.height);
+
     this.sendInput();
+
+    // HUD
     document.getElementById("coord-info").innerText = `X:${Math.floor(
       p.x / TILE_SIZE
     )} Y:${Math.floor(p.y / TILE_SIZE)}`;
+    document.getElementById("time-info").innerText =
+      light > 0.5 ? "Day" : "Night";
+    const biomeVal = Math.sin(
+      Math.floor(p.x / TILE_SIZE / CHUNK_SIZE) * CHUNK_SIZE * 0.01
+    );
+    document.getElementById("biome-info").innerText =
+      biomeVal > 0.3 ? "Desert" : biomeVal < -0.3 ? "Snow" : "Plains";
   }
 
   sendInput() {
@@ -730,6 +925,7 @@ class Game {
     else this.net.send({ type: "INPUT", keys: this.keys });
   }
 
+  // --- UI & INVENTORY ---
   initUI() {
     const bar = document.getElementById("inventory-bar");
     for (let i = 0; i < 9; i++) {
@@ -748,17 +944,20 @@ class Game {
       d.onclick = () => {
         if (this.selInvSlot === -1) this.selInvSlot = i;
         else {
+          // Swap
           const p = this.players[this.net.myId];
           const tmp = p.inv[i];
           p.inv[i] = p.inv[this.selInvSlot];
           p.inv[this.selInvSlot] = tmp;
           this.selInvSlot = -1;
+          this.updateUI();
         }
         this.updateUI();
       };
       grid.appendChild(d);
     }
-    const cg = document.getElementById("craft-grid");
+    // Crafting Grid
+    const cgrid = document.getElementById("craft-grid");
     for (let i = 0; i < 9; i++) {
       const d = document.createElement("div");
       d.className = "slot";
@@ -781,11 +980,24 @@ class Game {
         this.checkCraft();
         this.updateUI();
       };
-      cg.appendChild(d);
+      cgrid.appendChild(d);
     }
     document.getElementById("craft-result-slot").onclick = () => {
-      this.craftItem();
-      this.updateUI();
+      if (this.craftResult.id) {
+        this.giveItem(
+          this.net.myId,
+          this.craftResult.id,
+          this.craftResult.count
+        );
+        for (let i = 0; i < 9; i++)
+          if (this.craftGrid[i].id) {
+            this.craftGrid[i].count--;
+            if (this.craftGrid[i].count <= 0)
+              this.craftGrid[i] = { id: 0, count: 0 };
+          }
+        this.checkCraft();
+        this.updateUI();
+      }
     };
   }
 
@@ -794,6 +1006,7 @@ class Game {
     this.craftResult = { id: 0, count: 0 };
     for (let r of RECIPES) {
       if (r.shapeless) {
+        // Simplified shapeless check
         const need = {};
         let cnt = 0;
         r.in.forEach((id) => {
@@ -825,32 +1038,17 @@ class Game {
     }
     this.updateCraftUI();
   }
-  craftItem() {
-    if (this.craftResult.id === 0) return;
-    for (let i = 0; i < 9; i++)
-      if (this.craftGrid[i].id !== 0) {
-        this.craftGrid[i].count--;
-        if (this.craftGrid[i].count <= 0)
-          this.craftGrid[i] = { id: 0, count: 0 };
-      }
-    this.giveItem(this.net.myId, this.craftResult.id, this.craftResult.count);
-    this.checkCraft();
-  }
 
   updateUI() {
     const p = this.players[this.net.myId];
     if (!p) return;
-    document.getElementById("health-bar").style.width =
-      (p.hp / p.maxHp) * 100 + "%";
     const draw = (el, it) => {
       el.innerHTML = "";
       if (it.id && this.assets[it.id]) {
         const c = document.createElement("canvas");
-        c.width = 64;
-        c.height = 64;
-        c.style.width = "100%";
-        c.style.height = "100%";
-        c.getContext("2d").drawImage(this.assets[it.id], 0, 0, 64, 64);
+        c.width = 32;
+        c.height = 32;
+        c.getContext("2d").drawImage(this.assets[it.id], 0, 0);
         el.appendChild(c);
         const s = document.createElement("span");
         s.className = "count";
@@ -871,34 +1069,24 @@ class Game {
   }
   updateCraftUI() {
     const grid = document.getElementById("craft-grid").children;
-    this.craftGrid.forEach((it, i) => {
+    for (let i = 0; i < 9; i++) {
       const el = grid[i];
       el.innerHTML = "";
-      if (it.id && this.assets[it.id]) {
+      if (this.craftGrid[i].id && this.assets[this.craftGrid[i].id]) {
         const c = document.createElement("canvas");
-        c.width = 64;
-        c.height = 64;
-        c.style.width = "100%";
-        c.style.height = "100%";
-        c.getContext("2d").drawImage(this.assets[it.id], 0, 0, 64, 64);
+        c.width = 32;
+        c.height = 32;
+        c.getContext("2d").drawImage(this.assets[this.craftGrid[i].id], 0, 0);
         el.appendChild(c);
       }
-    });
+    }
     const res = document.getElementById("craft-result-slot");
     res.innerHTML = "";
     if (this.craftResult.id && this.assets[this.craftResult.id]) {
       const c = document.createElement("canvas");
-      c.width = 64;
-      c.height = 64;
-      c.style.width = "100%";
-      c.style.height = "100%";
-      c.getContext("2d").drawImage(
-        this.assets[this.craftResult.id],
-        0,
-        0,
-        64,
-        64
-      );
+      c.width = 32;
+      c.height = 32;
+      c.getContext("2d").drawImage(this.assets[this.craftResult.id], 0, 0);
       res.appendChild(c);
       const s = document.createElement("span");
       s.className = "count";
@@ -913,28 +1101,36 @@ class Game {
     this.updateUI();
   }
 
+  // --- SAVE/LOAD ---
   saveGame() {
     const p = this.players[this.net.myId];
     const data = {
-      chunks: Array.from(Object.entries(this.chunks)),
-      player: { x: p.x, y: p.y, inv: p.inv, profile: p.profile },
+      chunks: Array.from(Object.entries(this.chunks)), // Simple array tuple
+      player: { x: p.x, y: p.y, inv: p.inv },
+      time: this.time,
     };
-    localStorage.setItem("fsc16", JSON.stringify(data));
-    alert("Saved!");
+    localStorage.setItem("fsc_save", JSON.stringify(data));
+    alert("World Saved!");
   }
   loadGame() {
-    const j = localStorage.getItem("fsc16");
-    if (!j) return alert("No save");
-    const d = JSON.parse(j);
+    const json = localStorage.getItem("fsc_save");
+    if (!json) return alert("No save found.");
+    const data = JSON.parse(json);
+
+    // Restore Chunks
     this.chunks = {};
-    for (let [k, v] of d.chunks) this.chunks[k] = new Uint8Array(v);
-    this.spawn(d.player.x, d.player.y);
-    this.players[this.net.myId].inv = d.player.inv;
-    this.profile = d.player.profile;
+    for (let [k, arr] of data.chunks) this.chunks[k] = new Uint8Array(arr);
+
+    // Restore Player
+    this.spawn(data.player.x, data.player.y);
+    this.players[this.net.myId].inv = data.player.inv;
+    this.time = data.time || 0;
+
     document.getElementById("login-screen").style.display = "none";
     document.getElementById("game-ui").style.display = "block";
-    this.net.hostId = this.net.myId;
+    this.net.hostId = this.net.myId; // Force Singleplayer feel
     this.net.isHost = true;
+
     this.loop();
   }
 }
@@ -995,43 +1191,37 @@ class Network {
     dc.onopen = () => {
       if (this.isHost)
         this.send({ type: "INIT", chunks: {}, players: this.game.players });
-    };
+    }; // Simplified init
     dc.onmessage = (e) => this.onPacket(JSON.parse(e.data), tid);
   }
   send(msg) {
-    if (this.isHost) this.broadcast(msg);
+    if (this.isHost) this.bc(msg);
     else if (this.hostId && this.channels[this.hostId])
       this.channels[this.hostId].send(JSON.stringify(msg));
   }
-  broadcast(msg) {
+  bc(msg) {
     const s = JSON.stringify(msg);
     for (let id in this.channels) this.channels[id].send(s);
   }
   onPacket(m, sender) {
+    // Simple routing
     if (m.type === "MINE") {
       if (this.isHost) {
         this.game.setBlock(m.x, m.y, 0);
-        this.broadcast({ type: "BLOCK", x: m.x, y: m.y, id: 0 });
+        this.bc({ type: "BLOCK", x: m.x, y: m.y, id: 0 });
       }
     } else if (m.type === "BLOCK") this.game.setBlock(m.x, m.y, m.id);
     else if (m.type === "SYNC") {
-      for (let id in m.players) {
-        if (id !== this.game.net.myId) this.game.players[id] = m.players[id];
-      }
+      this.game.players = m.players;
       this.game.drops = m.drops;
-    } else if (m.type === "PROFILE" && this.isHost) {
-      if (this.game.players[m.id]) {
-        this.game.players[m.id].profile = m.profile;
-      }
+      this.game.time = m.time;
+      this.game.updateUI();
     } else if (m.type === "INPUT" && this.isHost) {
       const p = this.game.players[sender];
       if (p) {
-        if (m.keys.a) p.vx -= 1.0;
-        if (m.keys.d) p.vx += 1.0;
-        if (m.keys.w && p.grounded) {
-          p.vy = -12;
-          p.grounded = false;
-        }
+        if (m.keys.a) p.vx = -5;
+        if (m.keys.d) p.vx = 5;
+        if (m.keys.w && this.game.isSolid(p.x, p.y + 32)) p.vy = -10;
       }
     }
   }
