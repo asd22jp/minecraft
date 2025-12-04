@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>FullStackCraft v22 - Stable Fix</title>
+    <title>FullStackCraft v23 - Perfect Fix</title>
     <style>
       body {
         margin: 0;
@@ -15,7 +15,7 @@
         font-family: "Consolas", sans-serif;
         user-select: none;
         -webkit-user-select: none;
-        touch-action: none; /* iOS/Androidでのスクロール無効化 */
+        touch-action: none;
       }
       #ui-layer {
         position: absolute;
@@ -84,10 +84,9 @@
         pointer-events: auto;
         z-index: 50;
       }
-      /* モバイル調整 */
       @media (max-width: 768px) {
         #inventory-bar {
-          bottom: 120px; /* コントローラーの上 */
+          bottom: 120px;
           transform: translateX(-50%) scale(0.9);
         }
         #status-container {
@@ -259,8 +258,8 @@
 
       /* Mobile Controls */
       #mobile-controls {
-        display: none; /* JSでモバイル時にblockにする */
-        pointer-events: none; /* コンテナ自体はクリックを邪魔しない */
+        display: none;
+        pointer-events: none;
         position: absolute;
         bottom: 10px;
         width: 100%;
@@ -293,7 +292,7 @@
         justify-content: center;
         align-items: center;
         user-select: none;
-        pointer-events: auto; /* ボタンのみ反応させる */
+        pointer-events: auto;
         backdrop-filter: blur(2px);
       }
       .m-btn:active {
@@ -305,8 +304,8 @@
   <body>
     <div id="ui-layer">
       <div id="login-screen">
-        <h1>FullStackCraft v22</h1>
-        <p style="color: #ffd700">FIXED & STABLE</p>
+        <h1>FullStackCraft v23</h1>
+        <p style="color: #ffd700">TNT & DROP & CONNECT FIX</p>
         <p>Short Tap: Place | Hold: Mine</p>
         <input
           type="text"
@@ -347,7 +346,6 @@
             <div class="m-btn" id="btn-right">▶</div>
           </div>
           <div class="control-group">
-            <!-- インベントリボタン -->
             <div
               class="m-btn"
               id="btn-inv"
@@ -359,8 +357,6 @@
             >
               INV
             </div>
-            <!-- アクションボタン（ハンマー） -->
-            <!-- ジャンプボタン -->
             <div class="m-btn" id="btn-jump">▲</div>
           </div>
         </div>
@@ -388,11 +384,10 @@
     </div>
     <canvas id="game-canvas"></canvas>
 
-    <!-- Socket.ioの読み込み -->
     <script src="/socket.io/socket.io.js"></script>
 
     <script>
-      // FullStackCraft v22 - Fixed Update
+      // FullStackCraft v23 - Perfect Fix
       const TILE_SIZE = 48;
       const CHUNK_SIZE = 16;
       const GRAVITY = 0.5;
@@ -421,12 +416,12 @@
           reqTool: "pickaxe",
           drop: 21,
         },
+        // ★修正: 木(Log)の硬度を下げ、ツール指定を削除（素手でも壊しやすく、ドロップするように）
         4: {
           name: "Log",
           color: "#5d4037",
           solid: true,
-          hardness: 150,
-          reqTool: "axe",
+          hardness: 80,
           drop: 4,
         },
         5: {
@@ -436,12 +431,12 @@
           hardness: 10,
           drop: 300,
         },
+        // ★修正: 木材(Planks)も同様
         6: {
           name: "Planks",
           color: "#8d6e63",
           solid: true,
-          hardness: 100,
-          reqTool: "axe",
+          hardness: 60,
           drop: 6,
         },
         7: {
@@ -616,7 +611,6 @@
         { in: [15, 1], out: { id: 6, count: 1 }, shapeless: true },
       ];
 
-      // --- Network ---
       class Network {
         constructor(game) {
           this.game = game;
@@ -638,7 +632,6 @@
               this.game.start();
               document.getElementById("loading-screen").style.display = "none";
             } else {
-              // Client waits for sync
               document.getElementById("loading-screen").style.display = "flex";
             }
           });
@@ -690,11 +683,21 @@
         setupDC(dc, target) {
           this.channels[target] = dc;
           dc.onopen = () => {
-            if (this.isHost)
+            if (this.isHost) {
+              // ★重要: 接続確立直後に地形データだけでなく、プレイヤー情報(SYNC)も送る
+              // これがないとクライアントはずっとloading-screenのままになる
               this.sendTo(target, {
                 type: "CHUNK_DATA",
                 chunks: this.game.chunks,
               });
+              this.sendTo(target, {
+                type: "SYNC",
+                players: this.game.players,
+                drops: this.game.drops,
+                mobs: this.game.mobs,
+                time: this.game.time,
+              });
+            }
           };
           dc.onmessage = (e) => this.game.onPacket(JSON.parse(e.data), target);
         }
@@ -748,9 +751,8 @@
           this.selSlot = 0;
           this.mining = { active: false, bx: 0, by: 0, progress: 0 };
 
-          // Interaction Logic (Tap vs Hold)
           this.interact = { startT: 0, active: false };
-          this.longPressThreshold = 250; // ms
+          this.longPressThreshold = 250;
 
           this.craftGrid = Array(9).fill({ id: 0, count: 0 });
           this.craftResult = { id: 0, count: 0 };
@@ -762,7 +764,6 @@
 
           window.addEventListener("resize", () => this.fitScreen());
 
-          // Key Handling
           window.addEventListener("keydown", (e) => {
             this.keys[e.key.toLowerCase()] = true;
             if (e.key >= "1" && e.key <= "9") {
@@ -776,15 +777,12 @@
             (e) => (this.keys[e.key.toLowerCase()] = false)
           );
 
-          // Global Mouse Move
           window.addEventListener("mousemove", (e) => {
-            // モバイルコントローラー上では座標更新しない
             if (e.target.closest("#mobile-controls")) return;
             this.mouse.x = e.clientX;
             this.mouse.y = e.clientY;
           });
 
-          // Canvas Interaction (Mouse/Touch Unified)
           this.canvas.addEventListener("mousedown", (e) =>
             this.handleInputStart(e.clientX, e.clientY, e.button === 2)
           );
@@ -820,7 +818,6 @@
             { passive: false }
           );
 
-          // Disable context menu
           window.addEventListener("contextmenu", (e) => e.preventDefault());
 
           this.setupMobileControls();
@@ -839,14 +836,11 @@
           this.initInvUI();
         }
 
-        // --- Unified Input Handler (Tap vs Hold) ---
         handleInputStart(x, y, isRightClick) {
-          // インベントリが開いているときは無視（インベントリ操作を優先）
           if (
             document.getElementById("inventory-screen").style.display !== "none"
           )
             return;
-
           this.mouse.x = x;
           this.mouse.y = y;
           this.interact.startT = Date.now();
@@ -861,8 +855,6 @@
           this.mining.progress = 0;
 
           const duration = Date.now() - this.interact.startT;
-          // Short tap (< 250ms) -> Place/Interact
-          // Right click always places
           if (
             duration < this.longPressThreshold ||
             isRightClick ||
@@ -870,7 +862,6 @@
           ) {
             this.tryUseItem();
           }
-          // Long press logic handled in loop
         }
 
         setupMobileControls() {
@@ -879,7 +870,6 @@
           const btnJump = document.getElementById("btn-jump");
           const btnInv = document.getElementById("btn-inv");
 
-          // Attach events directly to buttons to avoid propagation issues
           const bindBtn = (elem, key) => {
             elem.addEventListener("touchstart", (e) => {
               e.preventDefault();
@@ -891,7 +881,6 @@
               e.stopPropagation();
               this.keys[key] = false;
             });
-            // Mouse fallback for testing on PC with mobile UI
             elem.addEventListener("mousedown", (e) => {
               e.stopPropagation();
               this.keys[key] = true;
@@ -906,7 +895,6 @@
           bindBtn(btnRight, "d");
           bindBtn(btnJump, "w");
 
-          // Inventory Button
           const toggle = (e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -925,13 +913,10 @@
           this.loop();
         }
 
-        // --- Logic Loop ---
         loop() {
-          // Check Hold interaction
           if (this.interact.active) {
             const duration = Date.now() - this.interact.startT;
             if (duration > this.longPressThreshold) {
-              // Holding -> Mine
               this.tryAttackOrMine();
             }
           }
@@ -957,7 +942,6 @@
               time: this.time,
             });
           } else {
-            // Client Logic: if we have player data, hide loading
             if (
               this.players[this.net.myId] &&
               document.getElementById("loading-screen").style.display !== "none"
@@ -970,10 +954,7 @@
           requestAnimationFrame(() => this.loop());
         }
 
-        // --- Mining Logic (Restored Drops) ---
         processMining() {
-          // Note: Logic moved to inside tryAttackOrMine -> set active -> loop
-          // Here we just advance progress if active
           if (!this.mining.active) {
             document.getElementById("mining-bar-container").style.display =
               "none";
@@ -984,7 +965,6 @@
             by = this.mining.by;
           const id = this.getBlock(bx, by);
 
-          // Stop if block changed to air or invalid
           if (!id) {
             this.mining.active = false;
             return;
@@ -1011,7 +991,7 @@
 
             if (block.explode) this.net.send({ type: "EXPLODE", x: bx, y: by });
 
-            // Restore Drops
+            // ★ドロップ処理復活
             let did = BLOCKS[id].drop || id;
             if (did) {
               this.net.send({
@@ -1023,7 +1003,7 @@
             }
 
             this.mining.progress = 0;
-            this.mining.active = false; // Stop mining after one block (require re-click for next, or remove for auto-mine)
+            this.mining.active = false;
           }
         }
 
@@ -1031,8 +1011,6 @@
           const mx = this.mouse.x + this.cam.x,
             my = this.mouse.y + this.cam.y;
 
-          // 1. Attack Entity
-          // Hitbox margin for easier mobile tapping
           const MARGIN = 30;
           const targets = [];
           for (let id in this.mobs)
@@ -1048,11 +1026,7 @@
               my > t.obj.y - MARGIN &&
               my < t.obj.y + 48 + MARGIN
             ) {
-              // Attack only happens once per click/hold cycle typically,
-              // but for continuous hold, we might want a cooldown.
-              // For now, spamming packet is bad. Let's limit it.
               if (this.time % 10 === 0) {
-                // Simple cooldown
                 this.net.send({
                   type: "HIT",
                   targetId: t.id,
@@ -1063,11 +1037,10 @@
             }
           }
 
-          // 2. Mine Block
           this.mining.active = true;
           this.mining.bx = Math.floor(mx / TILE_SIZE);
           this.mining.by = Math.floor(my / TILE_SIZE);
-          this.processMining(); // Run immediately
+          this.processMining();
         }
 
         tryUseItem() {
@@ -1079,8 +1052,7 @@
           if (!p) return;
           const item = p.inv[this.selSlot];
 
-          // TNT check
-          if (item.id === 16) return; // Prevent placing
+          // ★修正: TNT設置制限を解除 (if文削除)
 
           const itemDef = ITEMS[item.id];
           if (itemDef && itemDef.type === "food") {
@@ -1088,7 +1060,6 @@
             return;
           }
           if (item.id && !this.isSolid(bx, by)) {
-            // Player Collision Check
             if (
               !(
                 bx * TILE_SIZE < p.x + 24 &&
@@ -1107,7 +1078,6 @@
           }
         }
 
-        // --- Standard Methods (same as before but cleaned up) ---
         genAssets() {
           for (let id in BLOCKS) {
             if (id == 0) continue;
@@ -1597,7 +1567,6 @@
         }
 
         render() {
-          // Sync check
           if (!this.players[this.net.myId]) return;
 
           const p = this.players[this.net.myId];
