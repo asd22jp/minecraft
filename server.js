@@ -9,7 +9,6 @@ const io = new Server(server);
 
 app.use(express.static(path.join(__dirname, "public")));
 
-// ルーム管理
 const rooms = {};
 
 io.on("connection", (socket) => {
@@ -17,7 +16,6 @@ io.on("connection", (socket) => {
 
   socket.on("join-room", (roomId) => {
     socket.join(roomId);
-
     if (!rooms[roomId]) {
       rooms[roomId] = { hostId: socket.id, players: [socket.id] };
       socket.emit("role-assigned", { role: "HOST" });
@@ -39,18 +37,18 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    for (const roomId in rooms) {
-      const room = rooms[roomId];
+    for (const rId in rooms) {
+      const room = rooms[rId];
       const idx = room.players.indexOf(socket.id);
       if (idx !== -1) {
         room.players.splice(idx, 1);
         if (socket.id === room.hostId) {
           if (room.players.length > 0) {
             room.hostId = room.players[0];
-            io.to(roomId).emit("host-migrated", { newHostId: room.hostId });
+            io.to(rId).emit("host-migrated", { newHostId: room.hostId });
             io.to(room.hostId).emit("role-assigned", { role: "HOST" });
           } else {
-            delete rooms[roomId];
+            delete rooms[rId];
           }
         } else {
           io.to(room.hostId).emit("user-left", { userId: socket.id });
@@ -61,6 +59,4 @@ io.on("connection", (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));

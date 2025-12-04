@@ -3,30 +3,32 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FullStackCraft v3 - Mining Update</title>
+    <title>FullStackCraft v4 - Tool Specific Mining</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <div id="ui-layer">
       <div id="login-screen">
-        <h1>FullStackCraft v3</h1>
-        <p style="color: #ddd">New: Mining Speed, Tool Tiers, Combat</p>
+        <h1>FullStackCraft v4</h1>
+        <p>Correct tools are required to mine blocks.</p>
         <input
           type="text"
           id="room-input"
           placeholder="Room Name"
           value="world1"
         />
-        <button id="start-btn">Enter World</button>
-        <p>Hold Click: Mine | Click Entity: Attack</p>
+        <button id="start-btn">Start Game</button>
+        <div style="margin-top: 20px; font-size: 12px; color: #ccc">
+          PICKAXE -> Stone/Ores<br />
+          SHOVEL -> Dirt/Sand<br />
+          AXE -> Wood<br />
+          Left Click Hold: Mine | Right Click: Place
+        </div>
       </div>
       <div id="game-ui" style="display: none">
         <div id="debug-info">FPS: 0</div>
         <div id="inventory-bar"></div>
-        <div id="health-container">
-          <div id="health-bar"></div>
-        </div>
-        <!-- インベントリ画面 -->
+        <div id="health-container"><div id="health-bar"></div></div>
         <div id="inventory-screen" style="display: none">
           <div class="panel">
             <h2>Inventory</h2>
