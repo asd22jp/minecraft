@@ -1,8 +1,8 @@
 body {
   margin: 0;
   overflow: hidden;
-  background: #111;
-  font-family: "Segoe UI", sans-serif;
+  background: #000;
+  font-family: "Consolas", sans-serif;
   user-select: none;
 }
 #ui-layer {
@@ -19,14 +19,14 @@ body {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: linear-gradient(180deg, #333, #111);
+  background: linear-gradient(135deg, #1a237e, #311b92);
   padding: 40px;
   border-radius: 12px;
   text-align: center;
   color: white;
   pointer-events: auto;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
-  border: 2px solid #666;
+  box-shadow: 0 0 50px rgba(100, 100, 255, 0.5);
+  border: 2px solid #fff;
 }
 input,
 button {
@@ -35,15 +35,18 @@ button {
   border-radius: 6px;
   border: none;
   font-size: 16px;
+  width: 200px;
+  display: block;
+  margin: 10px auto;
 }
 button {
-  background: #2e7d32;
-  color: white;
+  background: #ffca28;
+  color: #000;
   cursor: pointer;
   font-weight: bold;
 }
 button:hover {
-  background: #388e3c;
+  background: #ffb300;
 }
 
 #hud-top {
@@ -51,9 +54,21 @@ button:hover {
   top: 10px;
   left: 10px;
   color: white;
-  text-shadow: 1px 1px 0 #000;
-  font-family: monospace;
+  text-shadow: 2px 2px 0 #000;
   font-size: 16px;
+}
+#action-buttons {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  pointer-events: auto;
+}
+#save-game-btn {
+  width: auto;
+  padding: 5px 15px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid white;
 }
 
 #inventory-bar {
@@ -61,18 +76,19 @@ button:hover {
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.7);
   padding: 6px;
   border-radius: 8px;
   display: flex;
   gap: 6px;
   pointer-events: auto;
+  backdrop-filter: blur(5px);
 }
 .slot {
-  width: 50px;
-  height: 50px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 2px solid #444;
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid #555;
   position: relative;
   cursor: pointer;
   display: flex;
@@ -80,23 +96,21 @@ button:hover {
   justify-content: center;
 }
 .slot:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.15);
 }
 .slot.active {
-  border-color: #fff;
-  background: rgba(255, 255, 255, 0.2);
+  border-color: #ffd700;
   transform: scale(1.1);
-  box-shadow: 0 0 10px #fff;
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
 }
 .count {
   position: absolute;
   bottom: 2px;
   right: 2px;
   color: white;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: bold;
   text-shadow: 1px 1px 0 #000;
-  pointer-events: none;
 }
 
 #health-container {
@@ -105,14 +119,14 @@ button:hover {
   left: 50%;
   transform: translateX(-50%);
   width: 300px;
-  height: 12px;
+  height: 16px;
   background: #222;
   border: 2px solid #fff;
 }
 #health-bar {
   width: 100%;
   height: 100%;
-  background: #f00;
+  background: #d32f2f;
   transition: width 0.2s;
 }
 
@@ -129,7 +143,7 @@ button:hover {
 #mining-bar {
   width: 0%;
   height: 100%;
-  background: #0f0;
+  background: #76ff03;
 }
 
 #inventory-screen {
@@ -137,10 +151,10 @@ button:hover {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(40, 40, 40, 0.95);
+  background: rgba(30, 30, 30, 0.98);
   padding: 30px;
-  border-radius: 8px;
-  border: 2px solid #666;
+  border-radius: 12px;
+  border: 2px solid #fff;
   display: flex;
   gap: 40px;
   pointer-events: auto;
@@ -151,15 +165,14 @@ button:hover {
   flex-direction: column;
   align-items: center;
 }
-
 #inv-grid {
   display: grid;
-  grid-template-columns: repeat(3, 50px);
+  grid-template-columns: repeat(9, 48px);
   gap: 6px;
-}
+} /* Expanded to 9x3 */
 #craft-grid {
   display: grid;
-  grid-template-columns: repeat(3, 50px);
+  grid-template-columns: repeat(3, 48px);
   gap: 6px;
   margin-bottom: 10px;
 }
@@ -177,4 +190,4 @@ canvas {
   image-rendering: pixelated;
   width: 100%;
   height: 100%;
-} /* Important: Fill slot */
+}

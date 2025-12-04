@@ -3,26 +3,32 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FullStackCraft v13 - Fixed</title>
+    <title>FullStackCraft v14 - Universe Update</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <div id="ui-layer">
       <div id="login-screen">
-        <h1>FullStackCraft v13</h1>
-        <p style="color: #4f4">Inventory Rendering Fixed</p>
+        <h1>FullStackCraft v14</h1>
+        <p style="color: #ffd700">THE UNIVERSE UPDATE</p>
+        <p>65+ Items, Biomes, Day/Night Cycle</p>
         <input
           type="text"
           id="room-input"
-          placeholder="Room Name"
+          placeholder="World Name"
           value="world1"
         />
-        <button id="start-btn">Start Game</button>
-        <p><strong>E</strong>: Inventory</p>
+        <button id="start-btn">Create / Join World</button>
+        <button id="load-btn" style="background: #555">Load Local World</button>
       </div>
       <div id="game-ui" style="display: none">
         <div id="hud-top">
-          <span id="coord-info">X: 0 Y: 0</span>
+          <span id="coord-info">X:0 Y:0</span> |
+          <span id="time-info">Day</span> |
+          <span id="biome-info">Plains</span>
+        </div>
+        <div id="action-buttons">
+          <button id="save-game-btn">Save</button>
         </div>
         <div id="inventory-bar"></div>
         <div id="health-container"><div id="health-bar"></div></div>
@@ -31,7 +37,7 @@
         </div>
         <div id="inventory-screen" style="display: none">
           <div class="panel">
-            <h2>Inventory</h2>
+            <h2>Backpack</h2>
             <div id="inv-grid"></div>
           </div>
           <div class="panel">
