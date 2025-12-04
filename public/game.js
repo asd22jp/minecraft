@@ -1,66 +1,38 @@
 /**
- * FullStackCraft v12 - Fixed Inventory & Assets
+ * FullStackCraft v13 - Rendering Fix
  */
 
 const TILE_SIZE = 48;
 const CHUNK_SIZE = 16;
 const GRAVITY = 0.5;
 
-// --- ID RANGES ---
-// Blocks: 1-99
-// Items (Materials): 200-299
-// Items (Tools): 100-199
-
+// --- DEFINITIONS ---
 const BLOCKS = {
   0: { name: "Air", solid: false },
-  1: {
-    name: "Grass",
-    color: "#5b8a36",
-    solid: true,
-    hardness: 100,
-    type: "grass",
-    drop: 2,
-  },
-  2: {
-    name: "Dirt",
-    color: "#704828",
-    solid: true,
-    hardness: 100,
-    type: "noise",
-    drop: 2,
-  },
+  1: { name: "Grass", color: "#5b8a36", solid: true, hardness: 100, drop: 2 },
+  2: { name: "Dirt", color: "#704828", solid: true, hardness: 100, drop: 2 },
   3: {
     name: "Stone",
     color: "#757575",
     solid: true,
     hardness: 400,
-    type: "noise",
     reqTool: "pickaxe",
     drop: 21,
-  }, // Drops Cobble(21)
+  },
   4: {
     name: "Log",
     color: "#5d4037",
     solid: true,
     hardness: 200,
-    type: "column",
     reqTool: "axe",
     drop: 4,
   },
-  5: {
-    name: "Leaves",
-    color: "#388e3c",
-    solid: true,
-    hardness: 15,
-    type: "noise",
-    drop: 200,
-  }, // Drops Stick(200) sometimes
+  5: { name: "Leaves", color: "#388e3c", solid: true, hardness: 15, drop: 200 },
   6: {
     name: "Planks",
     color: "#8d6e63",
     solid: true,
     hardness: 150,
-    type: "plank",
     reqTool: "axe",
     drop: 6,
   },
@@ -130,8 +102,6 @@ const BLOCKS = {
 const ITEMS = {
   0: { name: "Air" },
   1: { name: "Hand", power: 1.0 },
-
-  // Tools (100+)
   100: {
     name: "WoodPick",
     power: 5.0,
@@ -167,8 +137,6 @@ const ITEMS = {
     toolType: "sword",
     iconColor: "#8d6e63",
   },
-
-  // Materials (200+)
   200: { name: "Stick", type: "item", iconColor: "#8d6e63" },
   201: { name: "Coal", type: "item", iconColor: "#333" },
   202: { name: "Iron", type: "item", iconColor: "#ccc" },
@@ -177,17 +145,11 @@ const ITEMS = {
 };
 
 const RECIPES = [
-  // 1 Log -> 4 Planks
   { in: [4], out: { id: 6, count: 4 }, shapeless: true },
-  // 2 Planks -> 4 Sticks
   { in: [6, 6], out: { id: 200, count: 4 }, shapeless: true },
-  // 4 Planks -> CraftTable
   { pattern: [6, 6, 0, 6, 6, 0, 0, 0, 0], out: { id: 31, count: 1 } },
-  // Wood Pickaxe
   { pattern: [6, 6, 6, 0, 200, 0, 0, 200, 0], out: { id: 100, count: 1 } },
-  // Stone Pickaxe (Uses Cobble 21)
   { pattern: [21, 21, 21, 0, 200, 0, 0, 200, 0], out: { id: 101, count: 1 } },
-  // Wood Axe
   { pattern: [6, 6, 0, 6, 200, 0, 0, 200, 0], out: { id: 110, count: 1 } },
 ];
 
@@ -364,60 +326,54 @@ class Game {
   }
 
   genAssets() {
-    // Blocks (1-99)
     for (let id in BLOCKS) {
       if (id == 0) continue;
       const c = document.createElement("canvas");
-      c.width = TILE_SIZE;
-      c.height = TILE_SIZE;
+      c.width = 32;
+      c.height = 32;
       const ctx = c.getContext("2d");
       const b = BLOCKS[id];
       ctx.fillStyle = b.color || "#f0f";
-      ctx.fillRect(0, 0, TILE_SIZE, TILE_SIZE);
+      ctx.fillRect(0, 0, 32, 32);
       ctx.fillStyle = "rgba(0,0,0,0.1)";
       for (let i = 0; i < 20; i++)
-        ctx.fillRect(
-          Math.random() * TILE_SIZE,
-          Math.random() * TILE_SIZE,
-          2,
-          2
-        );
+        ctx.fillRect(Math.random() * 32, Math.random() * 32, 2, 2);
       if (b.type === "table") {
         ctx.fillStyle = "#d7ccc8";
-        ctx.fillRect(4, 0, TILE_SIZE - 8, 4);
-        ctx.fillRect(4, 4, 4, TILE_SIZE - 4);
-        ctx.fillRect(TILE_SIZE - 8, 4, 4, TILE_SIZE - 4);
+        ctx.fillRect(4, 0, 24, 4);
+        ctx.fillRect(4, 4, 4, 28);
+        ctx.fillRect(24, 4, 4, 28);
       }
       if (b.type === "column") {
         ctx.fillStyle = "rgba(0,0,0,0.2)";
-        ctx.fillRect(6, 0, 6, TILE_SIZE);
-        ctx.fillRect(TILE_SIZE - 12, 0, 6, TILE_SIZE);
+        ctx.fillRect(6, 0, 6, 32);
+        ctx.fillRect(20, 0, 6, 32);
       }
       if (b.type === "ore") {
         ctx.fillStyle = b.oreColor;
-        ctx.fillRect(12, 12, 10, 10);
-        ctx.fillRect(24, 24, 6, 6);
+        ctx.fillRect(10, 10, 10, 10);
       }
       if (b.type === "brick") {
         ctx.strokeStyle = "rgba(255,255,255,0.2)";
         ctx.lineWidth = 2;
-        ctx.strokeRect(0, 0, TILE_SIZE, TILE_SIZE);
+        ctx.strokeRect(0, 0, 32, 32);
       }
       this.assets.blocks[id] = c;
     }
-    // Items (100+)
     for (let id in ITEMS) {
+      if (id == 0) continue;
       const it = ITEMS[id];
       const c = document.createElement("canvas");
       c.width = 32;
       c.height = 32;
       const ctx = c.getContext("2d");
+      ctx.fillStyle = it.iconColor || "#fff";
       if (it.type === "tool" || it.type === "weapon") {
         ctx.translate(16, 16);
         ctx.rotate(-Math.PI / 4);
         ctx.fillStyle = "#5d4037";
         ctx.fillRect(-2, 0, 4, 14);
-        ctx.fillStyle = it.iconColor || "#fff";
+        ctx.fillStyle = it.iconColor;
         if (it.toolType === "pickaxe") {
           ctx.beginPath();
           ctx.arc(0, -2, 10, Math.PI, 0);
@@ -436,14 +392,12 @@ class Game {
           ctx.fillRect(-2, -14, 4, 16);
           ctx.fillRect(-6, 2, 12, 2);
         }
-      } else if (it.type === "item") {
-        ctx.fillStyle = it.iconColor || "#fff";
+      } else {
         if (id == 200) {
           ctx.rotate(-Math.PI / 4);
           ctx.fillStyle = "#5d4037";
           ctx.fillRect(10, 14, 4, 16);
-        } // Stick
-        else ctx.fillRect(8, 8, 16, 16);
+        } else ctx.fillRect(8, 8, 16, 16);
       }
       this.assets.items[id] = c;
     }
@@ -644,12 +598,8 @@ class Game {
     document.getElementById("mining-bar").style.width = pct + "%";
     if (this.mining.progress >= block.hardness) {
       this.setBlock(bx, by, 0);
-      // Correct Drops
-      let did = block.drop || id;
-      if (id === 5 && Math.random() > 0.2) did = 0; // Leaves drop stick occasionally handled in drop def?
-      // No, simplified: Leaves always drop Stick(200) based on BLOCKS definition above.
-
-      if (did !== 0)
+      let did = BLOCKS[id].drop || id;
+      if (did)
         this.drops.push(
           new Drop(
             bx * TILE_SIZE + TILE_SIZE / 2,
@@ -685,9 +635,8 @@ class Game {
     };
     if (id === this.net.myId) {
       const inv = this.players[id].inv;
-      // Starter Kit
-      inv[0] = { id: 110, count: 1 }; // Wood Axe
-      inv[1] = { id: 100, count: 1 }; // Wood Pick
+      inv[0] = { id: 110, count: 1 };
+      inv[1] = { id: 100, count: 1 };
       this.updateUI();
       this.cam.x = x - this.width / 2;
       this.cam.y = y - this.height / 2;
@@ -871,6 +820,29 @@ class Game {
     }
     this.sendInput();
   }
+
+  // ★ CRITICAL FIX: Use create element instead of innerHTML to preserve canvas context ★
+  drawSlot(el, it) {
+    el.innerHTML = ""; // Clear text/nodes
+    if (it.id !== 0) {
+      const i = this.assets.blocks[it.id] || this.assets.items[it.id];
+      if (i) {
+        const c = document.createElement("canvas");
+        c.width = 32;
+        c.height = 32;
+        c.getContext("2d").drawImage(i, 0, 0);
+        el.appendChild(c);
+      } else {
+        // Fallback if asset missing
+        el.style.backgroundColor = "#f0f";
+      }
+      const span = document.createElement("span");
+      span.className = "count";
+      span.innerText = it.count;
+      el.appendChild(span);
+    }
+  }
+
   initInvUI() {
     const g = document.getElementById("inv-grid");
     g.innerHTML = "";
@@ -926,71 +898,36 @@ class Game {
       this.updateCraftUI();
     };
   }
+
   updateUI() {
     const p = this.players[this.net.myId];
     if (!p) return;
     document.getElementById("health-bar").style.width =
       (p.hp / p.maxHp) * 100 + "%";
-    const ren = (el, it) => {
-      el.innerHTML = "";
-      if (it.id) {
-        const i = this.assets.blocks[it.id] || this.assets.items[it.id];
-        if (i) {
-          const c = document.createElement("canvas");
-          c.width = 32;
-          c.height = 32;
-          c.getContext("2d").drawImage(i, 0, 0);
-          el.appendChild(c);
-        }
-        el.innerHTML += `<span class="count">${it.count}</span>`;
-      }
-    };
+
     const bar = document.getElementById("inventory-bar");
     bar.innerHTML = "";
     p.inv.forEach((it, i) => {
       const d = document.createElement("div");
       d.className = `slot ${i === this.selSlot ? "active" : ""}`;
-      ren(d, it);
+      this.drawSlot(d, it);
       bar.appendChild(d);
     });
     const grid = document.getElementById("inv-grid").children;
     p.inv.forEach((it, i) => {
-      ren(grid[i], it);
+      this.drawSlot(grid[i], it);
       grid[i].style.borderColor = i === this.selectedInvSlot ? "#0f0" : "#444";
     });
   }
+
   updateCraftUI() {
     const grid = document.getElementById("craft-grid").children;
     this.craftGrid.forEach((it, i) => {
-      const el = grid[i];
-      el.innerHTML = "";
-      if (it.id) {
-        const i = this.assets.blocks[it.id] || this.assets.items[it.id];
-        if (i) {
-          const c = document.createElement("canvas");
-          c.width = 32;
-          c.height = 32;
-          c.getContext("2d").drawImage(i, 0, 0);
-          el.appendChild(c);
-        }
-        el.innerHTML += `<span class="count">${it.count}</span>`;
-      }
+      this.drawSlot(grid[i], it);
     });
     const resEl = document.getElementById("craft-result-slot");
-    resEl.innerHTML = "";
-    if (this.craftResult.id !== 0) {
-      const it = this.craftResult;
-      const i = this.assets.blocks[it.id] || this.assets.items[it.id];
-      if (i) {
-        const c = document.createElement("canvas");
-        c.width = 32;
-        c.height = 32;
-        c.getContext("2d").drawImage(i, 0, 0);
-        resEl.appendChild(c);
-      }
-      resEl.innerHTML += `<span class="count">${it.count}</span>`;
-      resEl.style.cursor = "pointer";
-    } else resEl.style.cursor = "default";
+    this.drawSlot(resEl, this.craftResult);
+    resEl.style.cursor = this.craftResult.id !== 0 ? "pointer" : "default";
   }
   toggleInv() {
     const s = document.getElementById("inventory-screen");
