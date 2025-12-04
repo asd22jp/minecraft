@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FullStackCraft v9 - Infinite Chunks</title>
+    <title>FullStackCraft v11 - Crafting</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <div id="ui-layer">
       <div id="login-screen">
-        <h1>FullStackCraft v9</h1>
-        <p style="color: #88ccff">Infinite World & Realistic Mining Time</p>
+        <h1>FullStackCraft v11</h1>
+        <p style="color: #fb0">Crafting System Update</p>
         <input
           type="text"
           id="room-input"
@@ -18,7 +18,7 @@
           value="world1"
         />
         <button id="start-btn">Enter World</button>
-        <p><strong>Note:</strong> Wood takes 5s to break by hand.</p>
+        <p><strong>E</strong> to Open Inventory & Crafting</p>
       </div>
       <div id="game-ui" style="display: none">
         <div id="hud-top">
@@ -30,10 +30,20 @@
         <div id="mining-bar-container" style="display: none">
           <div id="mining-bar"></div>
         </div>
+
+        <!-- Main Inventory & Crafting Screen -->
         <div id="inventory-screen" style="display: none">
           <div class="panel">
             <h2>Inventory</h2>
             <div id="inv-grid"></div>
+            <p class="hint">Click item to select</p>
+          </div>
+          <div class="panel">
+            <h2>Crafting (3x3)</h2>
+            <div id="craft-grid"></div>
+            <div id="arrow">⬇</div>
+            <div id="craft-result-slot" class="slot"></div>
+            <p class="hint">Click grid to place</p>
           </div>
         </div>
       </div>
