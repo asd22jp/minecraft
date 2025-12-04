@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>FullStackCraft v21 - Fix Update</title>
+    <title>FullStackCraft v22 - Stable Fix</title>
     <style>
       body {
         margin: 0;
@@ -15,7 +15,7 @@
         font-family: "Consolas", sans-serif;
         user-select: none;
         -webkit-user-select: none;
-        touch-action: none;
+        touch-action: none; /* iOS/Androidでのスクロール無効化 */
       }
       #ui-layer {
         position: absolute;
@@ -39,7 +39,7 @@
         pointer-events: auto;
         box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
         border: 2px solid #ffd700;
-        z-index: 100;
+        z-index: 200;
       }
       input,
       button {
@@ -62,6 +62,7 @@
         background: #ffb300;
       }
 
+      /* HUD */
       #hud-top {
         position: absolute;
         top: 10px;
@@ -83,9 +84,10 @@
         pointer-events: auto;
         z-index: 50;
       }
+      /* モバイル調整 */
       @media (max-width: 768px) {
         #inventory-bar {
-          bottom: 120px;
+          bottom: 120px; /* コントローラーの上 */
           transform: translateX(-50%) scale(0.9);
         }
         #status-container {
@@ -163,14 +165,15 @@
 
       #mining-bar-container {
         position: absolute;
-        top: 60%;
+        top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        width: 60px;
-        height: 8px;
-        background: #000;
+        width: 100px;
+        height: 10px;
+        background: rgba(0, 0, 0, 0.5);
         border: 1px solid white;
         display: none;
+        z-index: 80;
       }
       #mining-bar {
         width: 0%;
@@ -194,7 +197,7 @@
         z-index: 150;
         max-width: 90vw;
         max-height: 80vh;
-        overflow: auto;
+        overflow-y: auto;
       }
       .panel {
         display: flex;
@@ -232,31 +235,36 @@
         width: 100%;
         height: 100%;
       }
-      #death-screen {
+      #death-screen,
+      #loading-screen {
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(100, 0, 0, 0.5);
+        background: rgba(0, 0, 0, 0.8);
         display: none;
         align-items: center;
         justify-content: center;
         flex-direction: column;
         color: white;
-        font-size: 40px;
+        font-size: 30px;
         pointer-events: auto;
         z-index: 200;
+      }
+      #loading-screen {
+        z-index: 190;
+        font-family: sans-serif;
       }
 
       /* Mobile Controls */
       #mobile-controls {
-        display: none;
-        pointer-events: auto;
+        display: none; /* JSでモバイル時にblockにする */
+        pointer-events: none; /* コンテナ自体はクリックを邪魔しない */
         position: absolute;
         bottom: 10px;
         width: 100%;
-        height: 120px;
+        height: 140px;
         z-index: 90;
         justify-content: space-between;
         padding: 0 20px;
@@ -271,12 +279,13 @@
         display: flex;
         gap: 15px;
         align-items: flex-end;
+        pointer-events: none;
       }
       .m-btn {
         width: 60px;
         height: 60px;
-        background: rgba(255, 255, 255, 0.2);
-        border: 2px solid white;
+        background: rgba(255, 255, 255, 0.15);
+        border: 2px solid rgba(255, 255, 255, 0.8);
         border-radius: 50%;
         color: white;
         font-size: 24px;
@@ -284,19 +293,21 @@
         justify-content: center;
         align-items: center;
         user-select: none;
-        -webkit-user-select: none;
+        pointer-events: auto; /* ボタンのみ反応させる */
+        backdrop-filter: blur(2px);
       }
       .m-btn:active {
         background: rgba(255, 215, 0, 0.5);
+        transform: scale(0.95);
       }
     </style>
   </head>
   <body>
     <div id="ui-layer">
       <div id="login-screen">
-        <h1>FullStackCraft v21</h1>
-        <p style="color: #ffd700">FIX UPDATE</p>
-        <p>Fixes: Mob Hits, Mobile Controls</p>
+        <h1>FullStackCraft v22</h1>
+        <p style="color: #ffd700">FIXED & STABLE</p>
+        <p>Short Tap: Place | Hold: Mine</p>
         <input
           type="text"
           id="room-input"
@@ -305,6 +316,9 @@
         />
         <button id="start-btn">Start Game</button>
       </div>
+
+      <div id="loading-screen">Connecting to World...</div>
+
       <div id="game-ui" style="display: none">
         <div id="hud-top">
           <span id="coord-info">X:0 Y:0</span> |
@@ -333,20 +347,20 @@
             <div class="m-btn" id="btn-right">▶</div>
           </div>
           <div class="control-group">
+            <!-- インベントリボタン -->
             <div
               class="m-btn"
               id="btn-inv"
-              style="border-radius: 8px; font-size: 16px"
+              style="
+                border-radius: 8px;
+                font-size: 14px;
+                background: rgba(0, 0, 255, 0.3);
+              "
             >
               INV
             </div>
-            <div
-              class="m-btn"
-              id="btn-action"
-              style="background: rgba(255, 0, 0, 0.3)"
-            >
-              🔨
-            </div>
+            <!-- アクションボタン（ハンマー） -->
+            <!-- ジャンプボタン -->
             <div class="m-btn" id="btn-jump">▲</div>
           </div>
         </div>
@@ -362,6 +376,9 @@
             <div style="font-size: 24px; margin: 5px">➡</div>
             <div id="craft-result-slot" class="slot"></div>
           </div>
+          <button id="close-inv-btn" style="background: #d32f2f; color: white">
+            Close
+          </button>
         </div>
       </div>
       <div id="death-screen">
@@ -370,9 +387,12 @@
       </div>
     </div>
     <canvas id="game-canvas"></canvas>
+
+    <!-- Socket.ioの読み込み -->
     <script src="/socket.io/socket.io.js"></script>
+
     <script>
-      // FullStackCraft v21 - Fix Update
+      // FullStackCraft v22 - Fixed Update
       const TILE_SIZE = 48;
       const CHUNK_SIZE = 16;
       const GRAVITY = 0.5;
@@ -596,6 +616,7 @@
         { in: [15, 1], out: { id: 6, count: 1 }, shapeless: true },
       ];
 
+      // --- Network ---
       class Network {
         constructor(game) {
           this.game = game;
@@ -606,11 +627,20 @@
           this.hostId = null;
           this.isHost = false;
 
-          this.socket.on("connect", () => (this.myId = this.socket.id));
+          this.socket.on("connect", () => {
+            this.myId = this.socket.id;
+            console.log("Connected as " + this.myId);
+          });
           this.socket.on("role-assigned", (d) => {
             this.isHost = d.role === "HOST";
             this.hostId = this.isHost ? this.myId : d.hostId;
-            if (this.isHost) this.game.start();
+            if (this.isHost) {
+              this.game.start();
+              document.getElementById("loading-screen").style.display = "none";
+            } else {
+              // Client waits for sync
+              document.getElementById("loading-screen").style.display = "flex";
+            }
           });
           this.socket.on("user-joined", (d) => {
             if (this.isHost) this.connectTo(d.userId, true);
@@ -633,6 +663,7 @@
             if (this.hostId === this.myId) {
               this.isHost = true;
               this.game.start();
+              document.getElementById("loading-screen").style.display = "none";
             } else window.location.reload();
           });
         }
@@ -712,10 +743,14 @@
           this.net = new Network(this);
 
           this.keys = {};
-          this.mouse = { x: 0, y: 0, left: false, right: false };
+          this.mouse = { x: 0, y: 0 };
           this.cam = { x: 0, y: 0 };
           this.selSlot = 0;
           this.mining = { active: false, bx: 0, by: 0, progress: 0 };
+
+          // Interaction Logic (Tap vs Hold)
+          this.interact = { startT: 0, active: false };
+          this.longPressThreshold = 250; // ms
 
           this.craftGrid = Array(9).fill({ id: 0, count: 0 });
           this.craftResult = { id: 0, count: 0 };
@@ -726,6 +761,8 @@
           this.genAssets();
 
           window.addEventListener("resize", () => this.fitScreen());
+
+          // Key Handling
           window.addEventListener("keydown", (e) => {
             this.keys[e.key.toLowerCase()] = true;
             if (e.key >= "1" && e.key <= "9") {
@@ -739,45 +776,53 @@
             (e) => (this.keys[e.key.toLowerCase()] = false)
           );
 
+          // Global Mouse Move
           window.addEventListener("mousemove", (e) => {
-            // モバイル操作時にUIボタンの位置でマウス座標が更新されるのを防ぐ
+            // モバイルコントローラー上では座標更新しない
             if (e.target.closest("#mobile-controls")) return;
             this.mouse.x = e.clientX;
             this.mouse.y = e.clientY;
           });
 
-          window.addEventListener("mousedown", (e) => {
-            if (e.target.closest("#mobile-controls")) return;
-            if (e.button === 0) {
-              this.mouse.left = true;
-              this.tryAttackOrMine();
-            }
-            if (e.button === 2) {
-              this.mouse.right = true;
-              this.tryUseItem();
-            }
-          });
-          window.addEventListener("mouseup", (e) => {
-            if (e.button === 0) {
-              this.mouse.left = false;
-              this.mining.active = false;
-              this.mining.progress = 0;
-            }
-            if (e.button === 2) this.mouse.right = false;
-          });
-          window.addEventListener("contextmenu", (e) => e.preventDefault());
-
-          // モバイルタッチ操作 (Canvas)
+          // Canvas Interaction (Mouse/Touch Unified)
+          this.canvas.addEventListener("mousedown", (e) =>
+            this.handleInputStart(e.clientX, e.clientY, e.button === 2)
+          );
+          this.canvas.addEventListener("mouseup", (e) =>
+            this.handleInputEnd(e.button === 2)
+          );
           this.canvas.addEventListener(
             "touchstart",
-            (e) => this.handleTouch(e),
+            (e) => {
+              if (e.touches.length > 0)
+                this.handleInputStart(
+                  e.touches[0].clientX,
+                  e.touches[0].clientY,
+                  false
+                );
+            },
+            { passive: false }
+          );
+          this.canvas.addEventListener(
+            "touchend",
+            (e) => this.handleInputEnd(false),
             { passive: false }
           );
           this.canvas.addEventListener(
             "touchmove",
-            (e) => this.handleTouch(e),
+            (e) => {
+              e.preventDefault();
+              if (e.touches.length > 0) {
+                this.mouse.x = e.touches[0].clientX;
+                this.mouse.y = e.touches[0].clientY;
+              }
+            },
             { passive: false }
           );
+
+          // Disable context menu
+          window.addEventListener("contextmenu", (e) => e.preventDefault());
+
           this.setupMobileControls();
 
           document.getElementById("start-btn").onclick = () => {
@@ -788,35 +833,54 @@
               document.getElementById("room-input").value
             );
           };
+          document.getElementById("close-inv-btn").onclick = () =>
+            this.toggleInv();
+
           this.initInvUI();
         }
 
-        handleTouch(e) {
-          e.preventDefault();
-          if (e.touches.length > 0) {
-            const t = e.touches[0];
-            this.mouse.x = t.clientX;
-            this.mouse.y = t.clientY;
+        // --- Unified Input Handler (Tap vs Hold) ---
+        handleInputStart(x, y, isRightClick) {
+          // インベントリが開いているときは無視（インベントリ操作を優先）
+          if (
+            document.getElementById("inventory-screen").style.display !== "none"
+          )
+            return;
+
+          this.mouse.x = x;
+          this.mouse.y = y;
+          this.interact.startT = Date.now();
+          this.interact.active = true;
+          this.interact.isRight = isRightClick;
+        }
+
+        handleInputEnd(isRightClick) {
+          if (!this.interact.active) return;
+          this.interact.active = false;
+          this.mining.active = false;
+          this.mining.progress = 0;
+
+          const duration = Date.now() - this.interact.startT;
+          // Short tap (< 250ms) -> Place/Interact
+          // Right click always places
+          if (
+            duration < this.longPressThreshold ||
+            isRightClick ||
+            this.interact.isRight
+          ) {
+            this.tryUseItem();
           }
+          // Long press logic handled in loop
         }
 
         setupMobileControls() {
           const btnLeft = document.getElementById("btn-left");
           const btnRight = document.getElementById("btn-right");
           const btnJump = document.getElementById("btn-jump");
-          const btnAction = document.getElementById("btn-action");
           const btnInv = document.getElementById("btn-inv");
-          const ctrls = document.getElementById("mobile-controls");
 
-          // 重要: UI操作がCanvasの座標判定に干渉しないように伝播を止める
-          const stopProp = (e) => e.stopPropagation();
-          ctrls.addEventListener("touchstart", stopProp);
-          ctrls.addEventListener("touchmove", stopProp);
-          ctrls.addEventListener("touchend", stopProp);
-          ctrls.addEventListener("mousedown", stopProp);
-          ctrls.addEventListener("mousemove", stopProp);
-
-          const handleBtn = (elem, key) => {
+          // Attach events directly to buttons to avoid propagation issues
+          const bindBtn = (elem, key) => {
             elem.addEventListener("touchstart", (e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -827,47 +891,29 @@
               e.stopPropagation();
               this.keys[key] = false;
             });
+            // Mouse fallback for testing on PC with mobile UI
+            elem.addEventListener("mousedown", (e) => {
+              e.stopPropagation();
+              this.keys[key] = true;
+            });
+            elem.addEventListener("mouseup", (e) => {
+              e.stopPropagation();
+              this.keys[key] = false;
+            });
           };
 
-          handleBtn(btnLeft, "a");
-          handleBtn(btnRight, "d");
-          handleBtn(btnJump, "w");
+          bindBtn(btnLeft, "a");
+          bindBtn(btnRight, "d");
+          bindBtn(btnJump, "w");
 
-          btnInv.addEventListener("touchstart", (e) => {
+          // Inventory Button
+          const toggle = (e) => {
             e.preventDefault();
             e.stopPropagation();
             this.toggleInv();
-          });
-
-          // アクションボタン（左クリック相当）
-          btnAction.addEventListener("touchstart", (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            // 注意: this.mouse.x/y は直前にCanvasをタッチした位置を使う
-            this.mouse.left = true;
-            this.tryAttackOrMine();
-          });
-          btnAction.addEventListener("touchend", (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            this.mouse.left = false;
-            this.mining.active = false;
-            this.mining.progress = 0;
-          });
-
-          // Canvasタップで右クリック相当（設置/使用）
-          this.canvas.addEventListener("touchstart", (e) => {
-            if (
-              document.getElementById("inventory-screen").style.display ===
-              "none"
-            ) {
-              this.mouse.right = true;
-              this.tryUseItem();
-            }
-          });
-          this.canvas.addEventListener("touchend", () => {
-            this.mouse.right = false;
-          });
+          };
+          btnInv.addEventListener("touchstart", toggle);
+          btnInv.addEventListener("mousedown", toggle);
         }
 
         fitScreen() {
@@ -879,6 +925,189 @@
           this.loop();
         }
 
+        // --- Logic Loop ---
+        loop() {
+          // Check Hold interaction
+          if (this.interact.active) {
+            const duration = Date.now() - this.interact.startT;
+            if (duration > this.longPressThreshold) {
+              // Holding -> Mine
+              this.tryAttackOrMine();
+            }
+          }
+
+          if (this.net.isHost) {
+            this.time++;
+            for (let id in this.players) {
+              const p = this.players[id];
+              const cx = Math.floor(p.x / TILE_SIZE / CHUNK_SIZE);
+              const cy = Math.floor(p.y / TILE_SIZE / CHUNK_SIZE);
+              for (let dy = -1; dy <= 1; dy++)
+                for (let dx = -2; dx <= 2; dx++)
+                  this.getChunk(cx + dx, cy + dy);
+            }
+            this.updatePhys();
+            this.updateDrops();
+            this.updateMobs();
+            this.net.broadcast({
+              type: "SYNC",
+              players: this.players,
+              drops: this.drops,
+              mobs: this.mobs,
+              time: this.time,
+            });
+          } else {
+            // Client Logic: if we have player data, hide loading
+            if (
+              this.players[this.net.myId] &&
+              document.getElementById("loading-screen").style.display !== "none"
+            ) {
+              document.getElementById("loading-screen").style.display = "none";
+            }
+          }
+
+          this.render();
+          requestAnimationFrame(() => this.loop());
+        }
+
+        // --- Mining Logic (Restored Drops) ---
+        processMining() {
+          // Note: Logic moved to inside tryAttackOrMine -> set active -> loop
+          // Here we just advance progress if active
+          if (!this.mining.active) {
+            document.getElementById("mining-bar-container").style.display =
+              "none";
+            return;
+          }
+
+          const bx = this.mining.bx,
+            by = this.mining.by;
+          const id = this.getBlock(bx, by);
+
+          // Stop if block changed to air or invalid
+          if (!id) {
+            this.mining.active = false;
+            return;
+          }
+          if (BLOCKS[id].unbreakable) return;
+
+          const p = this.players[this.net.myId];
+          const tool = ITEMS[p.inv[this.selSlot]?.id] || ITEMS[1];
+          const block = BLOCKS[id];
+          let power = tool.power || 1.0;
+          if (block.reqTool && tool.toolType !== block.reqTool) power = 0.5;
+
+          this.mining.progress += power;
+          const pct = Math.min(
+            100,
+            (this.mining.progress / block.hardness) * 100
+          );
+          document.getElementById("mining-bar-container").style.display =
+            "block";
+          document.getElementById("mining-bar").style.width = pct + "%";
+
+          if (this.mining.progress >= block.hardness) {
+            this.setBlock(bx, by, 0);
+
+            if (block.explode) this.net.send({ type: "EXPLODE", x: bx, y: by });
+
+            // Restore Drops
+            let did = BLOCKS[id].drop || id;
+            if (did) {
+              this.net.send({
+                type: "DROP",
+                x: bx * TILE_SIZE + 24,
+                y: by * TILE_SIZE + 24,
+                id: did,
+              });
+            }
+
+            this.mining.progress = 0;
+            this.mining.active = false; // Stop mining after one block (require re-click for next, or remove for auto-mine)
+          }
+        }
+
+        tryAttackOrMine() {
+          const mx = this.mouse.x + this.cam.x,
+            my = this.mouse.y + this.cam.y;
+
+          // 1. Attack Entity
+          // Hitbox margin for easier mobile tapping
+          const MARGIN = 30;
+          const targets = [];
+          for (let id in this.mobs)
+            targets.push({ type: "mob", obj: this.mobs[id], id });
+          for (let id in this.players)
+            if (id !== this.net.myId)
+              targets.push({ type: "player", obj: this.players[id], id });
+
+          for (let t of targets) {
+            if (
+              mx > t.obj.x - MARGIN &&
+              mx < t.obj.x + 32 + MARGIN &&
+              my > t.obj.y - MARGIN &&
+              my < t.obj.y + 48 + MARGIN
+            ) {
+              // Attack only happens once per click/hold cycle typically,
+              // but for continuous hold, we might want a cooldown.
+              // For now, spamming packet is bad. Let's limit it.
+              if (this.time % 10 === 0) {
+                // Simple cooldown
+                this.net.send({
+                  type: "HIT",
+                  targetId: t.id,
+                  targetType: t.type,
+                });
+              }
+              return;
+            }
+          }
+
+          // 2. Mine Block
+          this.mining.active = true;
+          this.mining.bx = Math.floor(mx / TILE_SIZE);
+          this.mining.by = Math.floor(my / TILE_SIZE);
+          this.processMining(); // Run immediately
+        }
+
+        tryUseItem() {
+          const mx = this.mouse.x + this.cam.x,
+            my = this.mouse.y + this.cam.y;
+          const bx = Math.floor(mx / TILE_SIZE),
+            by = Math.floor(my / TILE_SIZE);
+          const p = this.players[this.net.myId];
+          if (!p) return;
+          const item = p.inv[this.selSlot];
+
+          // TNT check
+          if (item.id === 16) return; // Prevent placing
+
+          const itemDef = ITEMS[item.id];
+          if (itemDef && itemDef.type === "food") {
+            this.net.send({ type: "EAT", slot: this.selSlot });
+            return;
+          }
+          if (item.id && !this.isSolid(bx, by)) {
+            // Player Collision Check
+            if (
+              !(
+                bx * TILE_SIZE < p.x + 24 &&
+                bx * TILE_SIZE + TILE_SIZE > p.x &&
+                by * TILE_SIZE < p.y + 54 &&
+                by * TILE_SIZE + TILE_SIZE > p.y
+              )
+            ) {
+              this.net.send({
+                type: "PLACE",
+                x: bx,
+                y: by,
+                slot: this.selSlot,
+              });
+            }
+          }
+        }
+
+        // --- Standard Methods (same as before but cleaned up) ---
         genAssets() {
           for (let id in BLOCKS) {
             if (id == 0) continue;
@@ -954,7 +1183,6 @@
             this.assets.items[id] = c;
           }
         }
-
         getChunkKey(cx, cy) {
           return `${cx},${cy}`;
         }
@@ -972,13 +1200,11 @@
           }
           return null;
         }
-
         genChunkData(cx, cy) {
           const data = new Uint8Array(CHUNK_SIZE * CHUNK_SIZE);
           const noise = (x) => Math.sin(x * 0.1) * 10 + Math.sin(x * 0.03) * 20;
           let biome = "plains";
           if (cx > 5 && cx < 15) biome = "desert";
-
           for (let x = 0; x < CHUNK_SIZE; x++) {
             const gx = cx * CHUNK_SIZE + x;
             const h = Math.floor(noise(gx));
@@ -1016,7 +1242,6 @@
             for (let i = 0; i < 3; i++) this.setBlock(gx, gy - i, 15);
           }, 10);
         }
-
         getBlock(gx, gy) {
           const cx = Math.floor(gx / CHUNK_SIZE);
           const cy = Math.floor(gy / CHUNK_SIZE);
@@ -1038,41 +1263,12 @@
           if (this.net.isHost)
             this.net.broadcast({ type: "BLOCK", x: gx, y: gy, id });
         }
-
-        loop() {
-          if (this.net.isHost) {
-            this.time++;
-            for (let id in this.players) {
-              const p = this.players[id];
-              const cx = Math.floor(p.x / TILE_SIZE / CHUNK_SIZE);
-              const cy = Math.floor(p.y / TILE_SIZE / CHUNK_SIZE);
-              for (let dy = -1; dy <= 1; dy++)
-                for (let dx = -2; dx <= 2; dx++)
-                  this.getChunk(cx + dx, cy + dy);
-            }
-            this.updatePhys();
-            this.updateDrops();
-            this.updateMobs();
-            this.net.broadcast({
-              type: "SYNC",
-              players: this.players,
-              drops: this.drops,
-              mobs: this.mobs,
-              time: this.time,
-            });
-          }
-          this.processMining();
-          this.render();
-          requestAnimationFrame(() => this.loop());
-        }
-
         updatePhys() {
           for (let id in this.players) {
             const p = this.players[id];
             if (this.time % 600 === 0 && p.food > 0) p.food--;
             if (p.food <= 0 && this.time % 100 === 0) p.hp--;
             if (p.hp <= 0) this.killPlayer(id);
-
             const inWater =
               this.getBlock(
                 Math.floor(p.x / TILE_SIZE),
@@ -1080,20 +1276,17 @@
               ) === 9;
             p.vy += inWater ? 0.1 : GRAVITY;
             if (inWater && p.vy > 2) p.vy = 2;
-
             p.x += p.vx;
             this.collide(p, "x");
             p.y += p.vy;
             this.collide(p, "y");
             p.vx *= inWater ? 0.6 : 0.8;
-
             const bx = Math.floor(p.x / TILE_SIZE),
               by = Math.floor(p.y / TILE_SIZE);
             if (this.getBlock(bx, by) === 15 && this.time % 30 === 0) p.hp--;
             if (p.y > 10000) this.killPlayer(id);
           }
         }
-
         killPlayer(id) {
           const p = this.players[id];
           p.inv.forEach((it) => {
@@ -1117,7 +1310,6 @@
           p.inv = Array(9).fill({ id: 0, count: 0 });
           if (id === this.net.myId) this.updateUI();
         }
-
         updateMobs() {
           if (Object.keys(this.mobs).length < 5 && Math.random() < 0.02) {
             const mid = Math.random().toString(36).substr(2, 5);
@@ -1171,7 +1363,6 @@
             if (m.y > 2000) delete this.mobs[id];
           }
         }
-
         updateDrops() {
           for (let i = this.drops.length - 1; i >= 0; i--) {
             const d = this.drops[i];
@@ -1195,7 +1386,6 @@
             if (d.life <= 0) this.drops.splice(i, 1);
           }
         }
-
         collide(e, axis) {
           const x1 = Math.floor(e.x / TILE_SIZE),
             x2 = Math.floor((e.x + 24) / TILE_SIZE);
@@ -1223,110 +1413,6 @@
           return id && BLOCKS[id].solid;
         }
 
-        tryAttackOrMine() {
-          const mx = this.mouse.x + this.cam.x,
-            my = this.mouse.y + this.cam.y;
-
-          // --- Mob Hit Detection Fix ---
-          // 当たり判定を少し広めに取る（モバイルなどで当てやすくするため）
-          const HIT_MARGIN = 20;
-
-          const targets = [];
-          for (let id in this.mobs)
-            targets.push({ type: "mob", obj: this.mobs[id], id });
-          for (let id in this.players)
-            if (id !== this.net.myId)
-              targets.push({ type: "player", obj: this.players[id], id });
-
-          for (let t of targets) {
-            // Check bounding box with margin
-            if (
-              mx > t.obj.x - HIT_MARGIN &&
-              mx < t.obj.x + 32 + HIT_MARGIN &&
-              my > t.obj.y - HIT_MARGIN &&
-              my < t.obj.y + 48 + HIT_MARGIN
-            ) {
-              this.net.send({
-                type: "HIT",
-                targetId: t.id,
-                targetType: t.type,
-              });
-              return; // Hit entity, don't mine
-            }
-          }
-
-          this.mining.active = true;
-          this.mining.progress = 0;
-          this.mining.bx = Math.floor(mx / TILE_SIZE);
-          this.mining.by = Math.floor(my / TILE_SIZE);
-        }
-
-        processMining() {
-          if (!this.mouse.left || !this.mining.active) {
-            document.getElementById("mining-bar-container").style.display =
-              "none";
-            return;
-          }
-          const bx = this.mining.bx,
-            by = this.mining.by;
-          const id = this.getBlock(bx, by);
-          if (!id || BLOCKS[id].unbreakable) return;
-
-          const p = this.players[this.net.myId];
-          const tool = ITEMS[p.inv[this.selSlot]?.id] || ITEMS[1];
-          const block = BLOCKS[id];
-          let power = tool.power || 1.0;
-          if (block.reqTool && tool.toolType !== block.reqTool) power = 0.5;
-
-          this.mining.progress += power;
-          const pct = Math.min(
-            100,
-            (this.mining.progress / block.hardness) * 100
-          );
-          document.getElementById("mining-bar-container").style.display =
-            "block";
-          document.getElementById("mining-bar").style.width = pct + "%";
-
-          if (this.mining.progress >= block.hardness) {
-            this.setBlock(bx, by, 0);
-            if (block.explode) this.net.send({ type: "EXPLODE", x: bx, y: by });
-            // Drop removed here (requested)
-            this.mining.progress = 0;
-            this.mining.active = false;
-          }
-        }
-
-        tryUseItem() {
-          const mx = this.mouse.x + this.cam.x,
-            my = this.mouse.y + this.cam.y;
-          const bx = Math.floor(mx / TILE_SIZE),
-            by = Math.floor(my / TILE_SIZE);
-          const p = this.players[this.net.myId];
-          const slot = this.selSlot;
-          const item = p.inv[slot];
-
-          // TNT設置不可 (ID 16)
-          if (item.id === 16) return;
-
-          const itemDef = ITEMS[item.id];
-          if (itemDef && itemDef.type === "food") {
-            this.net.send({ type: "EAT", slot });
-            return;
-          }
-          if (item.id && !this.isSolid(bx, by)) {
-            if (
-              !(
-                bx * TILE_SIZE < p.x + 24 &&
-                bx * TILE_SIZE + TILE_SIZE > p.x &&
-                by * TILE_SIZE < p.y + 54 &&
-                by * TILE_SIZE + TILE_SIZE > p.y
-              )
-            ) {
-              this.net.send({ type: "PLACE", x: bx, y: by, slot });
-            }
-          }
-        }
-
         spawnPlayer(id, x, y) {
           this.players[id] = {
             id,
@@ -1344,7 +1430,7 @@
             const inv = this.players[id].inv;
             inv[0] = { id: 110, count: 1 };
             inv[1] = { id: 100, count: 1 };
-            inv[2] = { id: 16, count: 5 }; // TNT (Cannot place)
+            inv[2] = { id: 16, count: 5 };
             this.updateUI();
             this.cam.x = x - this.width / 2;
             this.cam.y = y - this.height / 2;
@@ -1366,7 +1452,6 @@
               return;
             }
         }
-
         checkCrafting() {
           const gridIds = this.craftGrid.map((slot) => slot.id);
           for (let r of RECIPES) {
@@ -1396,13 +1481,12 @@
         }
         craftItem() {
           if (this.craftResult.id === 0) return;
-          for (let i = 0; i < 9; i++) {
+          for (let i = 0; i < 9; i++)
             if (this.craftGrid[i].id !== 0) {
               this.craftGrid[i].count--;
               if (this.craftGrid[i].count <= 0)
                 this.craftGrid[i] = { id: 0, count: 0 };
             }
-          }
           this.giveItem(
             this.net.myId,
             this.craftResult.id,
@@ -1410,10 +1494,8 @@
           );
           this.checkCrafting();
         }
-
         onPacket(msg, sender) {
-          if (msg.type === "INIT") {
-          } else if (msg.type === "CHUNK_DATA") {
+          if (msg.type === "CHUNK_DATA") {
             for (let k in msg.chunks)
               this.chunks[k] = new Uint8Array(Object.values(msg.chunks[k]));
           } else if (msg.type === "SYNC") {
@@ -1515,7 +1597,9 @@
         }
 
         render() {
+          // Sync check
           if (!this.players[this.net.myId]) return;
+
           const p = this.players[this.net.myId];
           this.cam.x += (p.x - this.width / 2 - this.cam.x) * 0.1;
           this.cam.y += (p.y - this.height / 2 - this.cam.y) * 0.1;
@@ -1702,7 +1786,8 @@
             const d = document.createElement("div");
             d.className = `slot ${i === this.selSlot ? "active" : ""}`;
             this.drawSlot(d, it);
-            d.onclick = () => {
+            d.onclick = (e) => {
+              e.stopPropagation();
               this.selSlot = i;
               this.updateUI();
             };
