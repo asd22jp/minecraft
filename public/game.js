@@ -1,9 +1,8 @@
-// FullStackCraft v20 - Super Update
 const TILE_SIZE = 48;
 const CHUNK_SIZE = 16;
 const GRAVITY = 0.5;
 
-// --- 定義 (Blocks, Items) ---
+// --- Definitions ---
 const BLOCKS = {
   0: { name: "Air", solid: false },
   1: { name: "Grass", color: "#5b8a36", solid: true, hardness: 80, drop: 2 },
@@ -24,7 +23,7 @@ const BLOCKS = {
     reqTool: "axe",
     drop: 4,
   },
-  5: { name: "Leaves", color: "#388e3c", solid: true, hardness: 10, drop: 300 }, // Drop Apple
+  5: { name: "Leaves", color: "#388e3c", solid: true, hardness: 10, drop: 300 },
   6: {
     name: "Planks",
     color: "#8d6e63",
@@ -54,7 +53,7 @@ const BLOCKS = {
     solid: true,
     hardness: 30,
     drop: 0,
-  }, // Silk touch needed usually, but drops nothing here
+  },
   11: {
     name: "CoalOre",
     color: "#222",
@@ -130,6 +129,7 @@ const BLOCKS = {
 const ITEMS = {
   0: { name: "Air" },
   1: { name: "Hand", power: 1.0 },
+  16: { name: "TNT", type: "block", iconColor: "#d32f2f" }, // Fixed: Added TNT Item
   100: {
     name: "WoodPick",
     power: 3.0,
@@ -175,20 +175,18 @@ const ITEMS = {
   302: { name: "Steak", type: "food", food: 10, iconColor: "#795548" },
 };
 
-// --- レシピ ---
 const RECIPES = [
   { in: [4], out: { id: 6, count: 4 }, shapeless: true },
   { in: [6, 6], out: { id: 200, count: 4 }, shapeless: true },
   { pattern: [6, 6, 0, 6, 6, 0, 0, 0, 0], out: { id: 31, count: 1 } },
-  { pattern: [6, 6, 6, 0, 200, 0, 0, 200, 0], out: { id: 100, count: 1 } }, // Pick
-  { pattern: [21, 21, 21, 0, 200, 0, 0, 200, 0], out: { id: 101, count: 1 } }, // Stone Pick
-  { pattern: [6, 6, 0, 6, 200, 0, 0, 200, 0], out: { id: 110, count: 1 } }, // Axe
-  { pattern: [0, 202, 0, 0, 202, 0, 0, 200, 0], out: { id: 130, count: 1 } }, // Iron Sword
-  { in: [8], out: { id: 10, count: 1 }, shapeless: true }, // Sand -> Glass (Simplified)
-  { in: [15, 1], out: { id: 6, count: 1 }, shapeless: true }, // Cactus -> Planks (dummy)
+  { pattern: [6, 6, 6, 0, 200, 0, 0, 200, 0], out: { id: 100, count: 1 } },
+  { pattern: [21, 21, 21, 0, 200, 0, 0, 200, 0], out: { id: 101, count: 1 } },
+  { pattern: [6, 6, 0, 6, 200, 0, 0, 200, 0], out: { id: 110, count: 1 } },
+  { pattern: [0, 202, 0, 0, 202, 0, 0, 200, 0], out: { id: 130, count: 1 } },
+  { in: [8], out: { id: 10, count: 1 }, shapeless: true },
 ];
 
-// --- ネットワーククラス ---
+// --- Network ---
 class Network {
   constructor(game) {
     this.game = game;
@@ -272,23 +270,7 @@ class Network {
   }
 }
 
-// --- Mobクラス ---
-class Mob {
-  constructor(id, type, x, y) {
-    this.id = id;
-    this.type = type; // "zombie", "cow"
-    this.x = x;
-    this.y = y;
-    this.vx = 0;
-    this.vy = 0;
-    this.hp = type === "zombie" ? 20 : 10;
-    this.w = 32;
-    this.h = 48;
-    this.facing = 1;
-  }
-}
-
-// --- ゲームクラス ---
+// --- Game ---
 class Game {
   constructor() {
     this.canvas = document.getElementById("game-canvas");
@@ -298,24 +280,23 @@ class Game {
     this.chunks = {};
     this.players = {};
     this.drops = [];
-    this.mobs = {}; // Mobリスト
-    this.particles = [];
+    this.mobs = {};
     this.net = new Network(this);
 
     this.keys = {};
     this.mouse = { x: 0, y: 0, left: false, right: false };
+    this.mobileState = { mine: false, place: false };
     this.cam = { x: 0, y: 0 };
     this.selSlot = 0;
     this.mining = { active: false, bx: 0, by: 0, progress: 0 };
-
     this.craftGrid = Array(9).fill({ id: 0, count: 0 });
     this.craftResult = { id: 0, count: 0 };
     this.selectedInvSlot = -1;
-
-    this.time = 0; // Day/Night
-    this.assets = { blocks: {}, items: {}, mobs: {} };
+    this.time = 0;
+    this.assets = { blocks: {}, items: {} };
     this.genAssets();
 
+    // Inputs
     window.addEventListener("resize", () => this.fitScreen());
     window.addEventListener("keydown", (e) => {
       this.keys[e.key.toLowerCase()] = true;
@@ -336,22 +317,24 @@ class Game {
     window.addEventListener("mousedown", (e) => {
       if (e.button === 0) {
         this.mouse.left = true;
-        this.tryAttackOrMine();
+        this.tryAction("MINE");
       }
       if (e.button === 2) {
         this.mouse.right = true;
-        this.tryUseItem();
+        this.tryAction("PLACE");
       }
     });
     window.addEventListener("mouseup", (e) => {
       if (e.button === 0) {
         this.mouse.left = false;
-        this.mining.active = false;
-        this.mining.progress = 0;
+        this.stopMining();
       }
       if (e.button === 2) this.mouse.right = false;
     });
     window.addEventListener("contextmenu", (e) => e.preventDefault());
+
+    // Mobile UI Bindings
+    this.setupMobileControls();
 
     document.getElementById("start-btn").onclick = () => {
       document.getElementById("login-screen").style.display = "none";
@@ -373,9 +356,48 @@ class Game {
     this.loop();
   }
 
-  // アセット生成（Canvasで描画）
+  setupMobileControls() {
+    const bindBtn = (id, key) => {
+      const el = document.getElementById(id);
+      el.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        this.keys[key] = true;
+      });
+      el.addEventListener("touchend", (e) => {
+        e.preventDefault();
+        this.keys[key] = false;
+      });
+    };
+    bindBtn("ctrl-left", "a");
+    bindBtn("ctrl-right", "d");
+    bindBtn("ctrl-jump", "w");
+
+    // Mobile Actions
+    const btnMine = document.getElementById("ctrl-mine");
+    btnMine.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      this.mobileState.mine = true;
+      this.tryAction("MINE");
+    });
+    btnMine.addEventListener("touchend", (e) => {
+      e.preventDefault();
+      this.mobileState.mine = false;
+      this.stopMining();
+    });
+
+    const btnPlace = document.getElementById("ctrl-place");
+    btnPlace.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      this.tryAction("PLACE");
+    });
+
+    document.getElementById("ctrl-inv").addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      this.toggleInv();
+    });
+  }
+
   genAssets() {
-    // Blocks
     for (let id in BLOCKS) {
       if (id == 0) continue;
       const c = document.createElement("canvas");
@@ -387,67 +409,29 @@ class Game {
       if (b.liquid) ctx.globalAlpha = 0.6;
       ctx.fillRect(0, 0, 32, 32);
       ctx.globalAlpha = 1.0;
-      if (b.name === "Glass") {
-        ctx.strokeStyle = "#fff";
-        ctx.strokeRect(4, 4, 10, 10);
-      } else if (b.name === "TNT") {
+      if (b.name === "TNT") {
         ctx.fillStyle = "white";
         ctx.font = "10px Arial";
         ctx.fillText("TNT", 6, 20);
-      } else if (b.name === "Cactus") {
-        ctx.fillStyle = "#000";
-        ctx.fillRect(4, 4, 2, 24);
-        ctx.fillRect(26, 4, 2, 24);
-      } else if (!b.liquid) {
-        // Noise
-        ctx.fillStyle = "rgba(0,0,0,0.1)";
-        for (let i = 0; i < 20; i++)
-          ctx.fillRect(Math.random() * 32, Math.random() * 32, 2, 2);
       }
       this.assets.blocks[id] = c;
     }
-    // Items
     for (let id in ITEMS) {
       if (id == 0) continue;
-      const it = ITEMS[id];
       const c = document.createElement("canvas");
       c.width = 32;
       c.height = 32;
       const ctx = c.getContext("2d");
-
+      const it = ITEMS[id];
       if (it.type === "tool" || it.type === "weapon") {
         ctx.translate(16, 16);
         ctx.rotate(-Math.PI / 4);
         ctx.fillStyle = "#5d4037";
-        ctx.fillRect(-2, 0, 4, 14); // Handle
-        ctx.fillStyle = it.iconColor;
-        if (it.toolType === "pickaxe") {
-          ctx.beginPath();
-          ctx.arc(0, -2, 10, Math.PI, 0);
-          ctx.lineTo(0, 4);
-          ctx.fill();
-        }
-        if (it.toolType === "axe") {
-          ctx.fillRect(-6, -8, 12, 10);
-        }
-        if (it.toolType === "shovel") {
-          ctx.beginPath();
-          ctx.arc(0, 0, 6, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        if (it.toolType === "sword") {
-          ctx.fillRect(-3, -16, 6, 20);
-          ctx.fillRect(-8, 4, 16, 3);
-        }
-      } else if (it.type === "food") {
+        ctx.fillRect(-2, 0, 4, 14);
         ctx.fillStyle = it.iconColor;
         ctx.beginPath();
-        ctx.arc(16, 16, 10, 0, Math.PI * 2);
+        ctx.arc(0, -2, 10, Math.PI, 0);
         ctx.fill();
-        if (it.name === "Apple") {
-          ctx.fillStyle = "#0f0";
-          ctx.fillRect(14, 4, 4, 4);
-        }
       } else {
         ctx.fillStyle = it.iconColor || "#fff";
         ctx.fillRect(8, 8, 16, 16);
@@ -463,7 +447,18 @@ class Game {
     const key = this.getChunkKey(cx, cy);
     if (this.chunks[key]) return this.chunks[key];
     if (this.net.isHost) {
-      const chunk = this.genChunkData(cx, cy);
+      const chunk = new Uint8Array(CHUNK_SIZE * CHUNK_SIZE);
+      const noise = (x) => Math.sin(x * 0.1) * 10 + Math.sin(x * 0.03) * 20;
+      for (let x = 0; x < CHUNK_SIZE; x++) {
+        const gx = cx * CHUNK_SIZE + x;
+        const h = Math.floor(noise(gx));
+        for (let y = 0; y < CHUNK_SIZE; y++) {
+          const gy = cy * CHUNK_SIZE + y;
+          if (gy > 40) chunk[y * 16 + x] = 7;
+          else if (gy > h) chunk[y * 16 + x] = gy < h + 4 ? 2 : 3;
+          else if (gy === h) chunk[y * 16 + x] = 1;
+        }
+      }
       this.chunks[key] = chunk;
       this.net.broadcast({
         type: "CHUNK_DATA",
@@ -473,103 +468,74 @@ class Game {
     }
     return null;
   }
-
-  // バイオーム生成
-  genChunkData(cx, cy) {
-    const data = new Uint8Array(CHUNK_SIZE * CHUNK_SIZE);
-    const noise = (x) => Math.sin(x * 0.1) * 10 + Math.sin(x * 0.03) * 20;
-
-    // 簡易バイオーム: X座標で決定
-    let biome = "plains";
-    if (cx > 5 && cx < 15) biome = "desert";
-
-    for (let x = 0; x < CHUNK_SIZE; x++) {
-      const gx = cx * CHUNK_SIZE + x;
-      const h = Math.floor(noise(gx));
-
-      for (let y = 0; y < CHUNK_SIZE; y++) {
-        const gy = cy * CHUNK_SIZE + y;
-        let id = 0;
-
-        if (gy > 40) id = 7; // Bedrock
-        else if (gy > h) {
-          id = 3; // Stone
-          if (gy < h + 4) id = biome === "desert" ? 8 : 2; // Sand or Dirt
-          if (id === 3 && Math.random() < 0.04)
-            id = 11 + Math.floor(Math.random() * 4); // Ores
-        } else if (gy === h) {
-          id = biome === "desert" ? 8 : 1; // Sand or Grass
-
-          if (biome === "plains" && Math.random() < 0.05)
-            this.structTree(gx, gy - 1);
-          if (biome === "desert" && Math.random() < 0.02)
-            this.structCactus(gx, gy - 1);
-        } else if (gy > h && gy < 5) {
-          // Water level
-          // Simple water logic could go here, but let's keep it simple
-        }
-
-        if (data[y * CHUNK_SIZE + x] === 0) data[y * CHUNK_SIZE + x] = id;
-      }
-    }
-    return data;
-  }
-  structTree(gx, gy) {
-    setTimeout(() => {
-      for (let i = 0; i < 4; i++) this.setBlock(gx, gy - i, 4);
-      for (let ly = gy - 5; ly <= gy - 3; ly++)
-        for (let lx = gx - 2; lx <= gx + 2; lx++)
-          if (!this.getBlock(lx, ly)) this.setBlock(lx, ly, 5);
-    }, 10);
-  }
-  structCactus(gx, gy) {
-    setTimeout(() => {
-      for (let i = 0; i < 3; i++) this.setBlock(gx, gy - i, 15);
-    }, 10);
-  }
-
   getBlock(gx, gy) {
-    const cx = Math.floor(gx / CHUNK_SIZE);
-    const cy = Math.floor(gy / CHUNK_SIZE);
+    const cx = Math.floor(gx / 16);
+    const cy = Math.floor(gy / 16);
     const chunk = this.chunks[this.getChunkKey(cx, cy)];
     if (!chunk) return 0;
-    const lx = ((gx % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
-    const ly = ((gy % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
-    return chunk[ly * CHUNK_SIZE + lx];
+    const lx = ((gx % 16) + 16) % 16;
+    const ly = ((gy % 16) + 16) % 16;
+    return chunk[ly * 16 + lx];
   }
   setBlock(gx, gy, id) {
-    const cx = Math.floor(gx / CHUNK_SIZE);
-    const cy = Math.floor(gy / CHUNK_SIZE);
-    const key = this.getChunkKey(cx, cy);
-    let chunk = this.chunks[key];
+    const cx = Math.floor(gx / 16);
+    const cy = Math.floor(gy / 16);
+    const chunk = this.chunks[this.getChunkKey(cx, cy)];
     if (!chunk) return;
-    const lx = ((gx % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
-    const ly = ((gy % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
-    chunk[ly * CHUNK_SIZE + lx] = id;
+    const lx = ((gx % 16) + 16) % 16;
+    const ly = ((gy % 16) + 16) % 16;
+    chunk[ly * 16 + lx] = id;
     if (this.net.isHost)
       this.net.broadcast({ type: "BLOCK", x: gx, y: gy, id });
   }
 
-  // --- ループ & 更新 ---
   loop() {
     if (this.net.isHost) {
       this.time++;
-      // Chunk Loading
       for (let id in this.players) {
         const p = this.players[id];
-        const cx = Math.floor(p.x / TILE_SIZE / CHUNK_SIZE);
-        const cy = Math.floor(p.y / TILE_SIZE / CHUNK_SIZE);
+        // Physics
+        p.vy += GRAVITY;
+        p.x += p.vx;
+        this.collide(p, "x");
+        p.y += p.vy;
+        this.collide(p, "y");
+        p.vx *= 0.8;
+        if (p.y > 2000) {
+          p.x = 0;
+          p.y = -200;
+          p.vy = 0;
+        }
+        // Load Chunks
+        const cx = Math.floor(p.x / 16 / 48),
+          cy = Math.floor(p.y / 16 / 48);
         for (let dy = -1; dy <= 1; dy++)
-          for (let dx = -2; dx <= 2; dx++) this.getChunk(cx + dx, cy + dy);
+          for (let dx = -1; dx <= 1; dx++) this.getChunk(cx + dx, cy + dy);
       }
-      this.updatePhys();
-      this.updateDrops();
-      this.updateMobs();
+      // Drops
+      for (let i = this.drops.length - 1; i >= 0; i--) {
+        const d = this.drops[i];
+        d.vy += GRAVITY;
+        d.y += d.vy;
+        if (this.isSolid(Math.floor(d.x / 48), Math.floor((d.y + 16) / 48))) {
+          d.y = Math.floor((d.y + 16) / 48) * 48 - 16;
+          d.vy = 0;
+        }
+        d.life--;
+        for (let pid in this.players) {
+          const p = this.players[pid];
+          if (Math.hypot(p.x - d.x, p.y - d.y) < 40) {
+            this.giveItem(pid, d.itemId, 1);
+            this.drops.splice(i, 1);
+            break;
+          }
+        }
+        if (d.life <= 0) this.drops.splice(i, 1);
+      }
       this.net.broadcast({
         type: "SYNC",
         players: this.players,
         drops: this.drops,
-        mobs: this.mobs,
         time: this.time,
       });
     }
@@ -578,162 +544,19 @@ class Game {
     requestAnimationFrame(() => this.loop());
   }
 
-  updatePhys() {
-    for (let id in this.players) {
-      const p = this.players[id];
-
-      // Hunger Logic
-      if (this.time % 600 === 0 && p.food > 0) p.food--;
-      if (p.food <= 0 && this.time % 100 === 0) p.hp--;
-      if (p.hp <= 0) this.killPlayer(id);
-
-      // Physics
-      const inWater =
-        this.getBlock(
-          Math.floor(p.x / TILE_SIZE),
-          Math.floor(p.y / TILE_SIZE)
-        ) === 9;
-      p.vy += inWater ? 0.1 : GRAVITY;
-      if (inWater && p.vy > 2) p.vy = 2;
-
-      p.x += p.vx;
-      this.collide(p, "x");
-      p.y += p.vy;
-      this.collide(p, "y");
-      p.vx *= inWater ? 0.6 : 0.8;
-
-      // Cactus Damage
-      const bx = Math.floor(p.x / TILE_SIZE),
-        by = Math.floor(p.y / TILE_SIZE);
-      if (this.getBlock(bx, by) === 15 && this.time % 30 === 0) p.hp--;
-
-      // Respawn if fell out
-      if (p.y > 10000) this.killPlayer(id);
-    }
-  }
-
-  killPlayer(id) {
-    const p = this.players[id];
-    // Drop items
-    p.inv.forEach((it) => {
-      if (it.id !== 0) {
-        for (let i = 0; i < it.count; i++)
-          this.drops.push({
-            id: Math.random(),
-            x: p.x,
-            y: p.y,
-            itemId: it.id,
-            vx: Math.random() * 4 - 2,
-            vy: -4,
-            life: 6000,
-          });
-      }
-    });
-    // Reset
-    p.hp = 20;
-    p.food = 20;
-    p.x = 0;
-    p.y = -200;
-    p.inv = Array(9).fill({ id: 0, count: 0 });
-    if (id === this.net.myId) this.updateUI();
-  }
-
-  updateMobs() {
-    // Spawn Logic
-    if (Object.keys(this.mobs).length < 5 && Math.random() < 0.02) {
-      const mid = Math.random().toString(36).substr(2, 5);
-      const isNight = this.time % 24000 > 12000;
-      const type = isNight ? "zombie" : "cow";
-      this.mobs[mid] = new Mob(mid, type, Math.random() * 1000 - 500, -200);
-    }
-
-    // AI
-    for (let id in this.mobs) {
-      const m = this.mobs[id];
-      m.vy += GRAVITY;
-      m.y += m.vy;
-
-      // Simple collision
-      const bx = Math.floor(m.x / TILE_SIZE),
-        by = Math.floor((m.y + 40) / TILE_SIZE);
-      if (this.isSolid(bx, by)) {
-        m.y = by * TILE_SIZE - 48;
-        m.vy = 0;
-        // Jump randomly
-        if (Math.random() < 0.01) m.vy = -8;
-      }
-
-      // Zombie chase
-      if (m.type === "zombie") {
-        let target = null;
-        let dist = 9999;
-        for (let pid in this.players) {
-          const p = this.players[pid];
-          const d = Math.abs(p.x - m.x);
-          if (d < dist && d < 400) {
-            dist = d;
-            target = p;
-          }
-        }
-        if (target) {
-          m.vx = target.x > m.x ? 2 : -2;
-          if (
-            Math.abs(target.x - m.x) < 30 &&
-            Math.abs(target.y - m.y) < 50 &&
-            this.time % 30 === 0
-          ) {
-            target.hp -= 3; // Attack player
-            target.vx = m.vx * 2; // Knockback
-            target.vy = -5;
-          }
-        } else m.vx = 0;
-      } else {
-        // Cow wander
-        if (Math.random() < 0.01) m.vx = (Math.random() - 0.5) * 2;
-      }
-
-      m.x += m.vx;
-      if (m.y > 2000) delete this.mobs[id];
-    }
-  }
-
-  updateDrops() {
-    for (let i = this.drops.length - 1; i >= 0; i--) {
-      const d = this.drops[i];
-      d.vy += GRAVITY;
-      d.y += d.vy;
-      const bx = Math.floor(d.x / TILE_SIZE),
-        by = Math.floor((d.y + 16) / TILE_SIZE);
-      if (this.isSolid(bx, by)) {
-        d.y = by * TILE_SIZE - 16;
-        d.vy = 0;
-      }
-      d.life--;
-      for (let pid in this.players) {
-        const p = this.players[pid];
-        if (Math.hypot(p.x - d.x, p.y - d.y) < 40) {
-          this.giveItem(pid, d.itemId, 1);
-          this.drops.splice(i, 1);
-          break;
-        }
-      }
-      if (d.life <= 0) this.drops.splice(i, 1);
-    }
-  }
-
   collide(e, axis) {
-    const x1 = Math.floor(e.x / TILE_SIZE),
-      x2 = Math.floor((e.x + 24) / TILE_SIZE);
-    const y1 = Math.floor(e.y / TILE_SIZE),
-      y2 = Math.floor((e.y + 54) / TILE_SIZE);
+    const x1 = Math.floor(e.x / 48),
+      x2 = Math.floor((e.x + 24) / 48);
+    const y1 = Math.floor(e.y / 48),
+      y2 = Math.floor((e.y + 54) / 48);
     for (let y = y1; y <= y2; y++)
       for (let x = x1; x <= x2; x++)
         if (this.isSolid(x, y)) {
           if (axis === "x") {
-            e.x = e.vx > 0 ? x * TILE_SIZE - 24.1 : (x + 1) * TILE_SIZE + 0.1;
+            e.x = e.vx > 0 ? x * 48 - 24.1 : (x + 1) * 48 + 0.1;
             e.vx = 0;
           } else {
-            e.y = e.vy > 0 ? y * TILE_SIZE - 54.1 : (y + 1) * TILE_SIZE + 0.1;
+            e.y = e.vy > 0 ? y * 48 - 54.1 : (y + 1) * 48 + 0.1;
             e.vy = 0;
             e.grounded = true;
           }
@@ -746,112 +569,85 @@ class Game {
     return id && BLOCKS[id].solid;
   }
 
-  // --- 入力処理 ---
-  tryAttackOrMine() {
-    // 1. Check for Entity (Player/Mob) Hit
-    const mx = this.mouse.x + this.cam.x,
-      my = this.mouse.y + this.cam.y;
+  // --- Actions ---
+  getTargetBlock() {
+    // If Mobile: Center of screen. If Desktop: Mouse cursor
+    if (window.innerWidth < 1024) {
+      // Simple mobile detection
+      return {
+        x: Math.floor(this.cam.x + this.width / 2),
+        y: Math.floor(this.cam.y + this.height / 2),
+      };
+    } else {
+      return { x: this.mouse.x + this.cam.x, y: this.mouse.y + this.cam.y };
+    }
+  }
 
-    // PvP / PvE
-    const targets = [];
-    for (let id in this.mobs)
-      targets.push({ type: "mob", obj: this.mobs[id], id });
-    for (let id in this.players)
-      if (id !== this.net.myId)
-        targets.push({ type: "player", obj: this.players[id], id });
+  tryAction(action) {
+    const target = this.getTargetBlock();
+    const bx = Math.floor(target.x / TILE_SIZE);
+    const by = Math.floor(target.y / TILE_SIZE);
+    const p = this.players[this.net.myId];
 
-    for (let t of targets) {
-      if (
-        mx > t.obj.x &&
-        mx < t.obj.x + 32 &&
-        my > t.obj.y &&
-        my < t.obj.y + 48
-      ) {
-        this.net.send({ type: "HIT", targetId: t.id, targetType: t.type });
-        return; // Hit entity, don't mine
+    if (action === "MINE") {
+      this.mining.active = true;
+      this.mining.bx = bx;
+      this.mining.by = by;
+      this.mining.progress = 0;
+    } else if (action === "PLACE") {
+      if (p.inv[this.selSlot].id && !this.isSolid(bx, by)) {
+        // Check player overlap
+        if (
+          !(
+            bx * 48 < p.x + 24 &&
+            bx * 48 + 48 > p.x &&
+            by * 48 < p.y + 54 &&
+            by * 48 + 48 > p.y
+          )
+        ) {
+          this.net.send({ type: "PLACE", x: bx, y: by, slot: this.selSlot });
+        }
       }
     }
-
-    // 2. Mine Block
-    this.mining.active = true;
-    this.mining.progress = 0;
-    this.mining.bx = Math.floor(mx / TILE_SIZE);
-    this.mining.by = Math.floor(my / TILE_SIZE);
+  }
+  stopMining() {
+    this.mining.active = false;
+    document.getElementById("mining-bar-container").style.display = "none";
   }
 
   processMining() {
-    if (!this.mouse.left || !this.mining.active) {
-      document.getElementById("mining-bar-container").style.display = "none";
+    if (!this.mining.active) return;
+    // Crosshair check for mobile (if moved too far)
+    const target = this.getTargetBlock();
+    const bx = Math.floor(target.x / TILE_SIZE);
+    const by = Math.floor(target.y / TILE_SIZE);
+    if (bx !== this.mining.bx || by !== this.mining.by) {
+      this.mining.active = false;
       return;
     }
-    const bx = this.mining.bx,
-      by = this.mining.by;
-    const id = this.getBlock(bx, by);
-    if (!id || BLOCKS[id].unbreakable) return;
+
+    const id = this.getBlock(this.mining.bx, this.mining.by);
+    if (!id || BLOCKS[id].unbreakable) {
+      this.stopMining();
+      return;
+    }
 
     const p = this.players[this.net.myId];
     const tool = ITEMS[p.inv[this.selSlot]?.id] || ITEMS[1];
-    const block = BLOCKS[id];
     let power = tool.power || 1.0;
 
-    if (block.reqTool && tool.toolType !== block.reqTool) power = 0.5;
-
     this.mining.progress += power;
-    const pct = Math.min(100, (this.mining.progress / block.hardness) * 100);
+    const pct = Math.min(
+      100,
+      (this.mining.progress / BLOCKS[id].hardness) * 100
+    );
+    const bar = document.getElementById("mining-bar");
     document.getElementById("mining-bar-container").style.display = "block";
-    document.getElementById("mining-bar").style.width = pct + "%";
+    bar.style.width = pct + "%";
 
-    if (this.mining.progress >= block.hardness) {
-      this.setBlock(bx, by, 0);
-
-      // Explosion logic for TNT
-      if (block.explode) {
-        this.net.send({ type: "EXPLODE", x: bx, y: by });
-      }
-
-      let did = BLOCKS[id].drop || id;
-      if (did)
-        this.net.send({
-          type: "DROP",
-          x: bx * TILE_SIZE + 24,
-          y: by * TILE_SIZE + 24,
-          id: did,
-        });
-
-      this.mining.progress = 0;
-      this.mining.active = false;
-    }
-  }
-
-  tryUseItem() {
-    const mx = this.mouse.x + this.cam.x,
-      my = this.mouse.y + this.cam.y;
-    const bx = Math.floor(mx / TILE_SIZE),
-      by = Math.floor(my / TILE_SIZE);
-    const p = this.players[this.net.myId];
-    const slot = this.selSlot;
-    const item = p.inv[slot];
-
-    // Eat Food
-    const itemDef = ITEMS[item.id];
-    if (itemDef && itemDef.type === "food") {
-      this.net.send({ type: "EAT", slot });
-      return;
-    }
-
-    // Place Block
-    if (item.id && !this.isSolid(bx, by)) {
-      // AABB check to prevent placing inside player
-      if (
-        !(
-          bx * TILE_SIZE < p.x + 24 &&
-          bx * TILE_SIZE + TILE_SIZE > p.x &&
-          by * TILE_SIZE < p.y + 54 &&
-          by * TILE_SIZE + TILE_SIZE > p.y
-        )
-      ) {
-        this.net.send({ type: "PLACE", x: bx, y: by, slot });
-      }
+    if (this.mining.progress >= BLOCKS[id].hardness) {
+      this.net.send({ type: "MINE", x: this.mining.bx, y: this.mining.by });
+      this.stopMining();
     }
   }
 
@@ -869,11 +665,10 @@ class Game {
       inv: Array(9).fill({ id: 0, count: 0 }),
     };
     if (id === this.net.myId) {
-      // Starter Kit
       const inv = this.players[id].inv;
-      inv[0] = { id: 110, count: 1 }; // Axe
-      inv[1] = { id: 100, count: 1 }; // Pick
-      inv[2] = { id: 16, count: 5 }; // TNT
+      inv[0] = { id: 110, count: 1 };
+      inv[1] = { id: 100, count: 1 };
+      inv[2] = { id: 16, count: 10 }; // TNT
       this.updateUI();
       this.cam.x = x - this.width / 2;
       this.cam.y = y - this.height / 2;
@@ -896,67 +691,23 @@ class Game {
       }
   }
 
-  checkCrafting() {
-    const gridIds = this.craftGrid.map((slot) => slot.id);
-    for (let r of RECIPES) {
-      if (r.shapeless) {
-        // Simple shapeless logic
-        const inIds = r.in.slice();
-        const gIds = gridIds.filter((id) => id !== 0);
-        if (inIds.length !== gIds.length) continue;
-        const match = inIds.every((id) => gIds.includes(id));
-        if (match) {
-          this.craftResult = { id: r.out.id, count: r.out.count };
-          this.updateCraftUI();
-          return;
-        }
-      } else if (r.pattern) {
-        let match = true;
-        for (let i = 0; i < 9; i++)
-          if (gridIds[i] !== r.pattern[i]) match = false;
-        if (match) {
-          this.craftResult = { id: r.out.id, count: r.out.count };
-          this.updateCraftUI();
-          return;
-        }
-      }
-    }
-    this.craftResult = { id: 0, count: 0 };
-    this.updateCraftUI();
-  }
-  craftItem() {
-    if (this.craftResult.id === 0) return;
-    for (let i = 0; i < 9; i++) {
-      if (this.craftGrid[i].id !== 0) {
-        this.craftGrid[i].count--;
-        if (this.craftGrid[i].count <= 0)
-          this.craftGrid[i] = { id: 0, count: 0 };
-      }
-    }
-    this.giveItem(this.net.myId, this.craftResult.id, this.craftResult.count);
-    this.checkCrafting();
-  }
-
-  // --- パケット処理 ---
   onPacket(msg, sender) {
     if (msg.type === "INIT") {
-      // Initial state
+      /* ... */
     } else if (msg.type === "CHUNK_DATA") {
       for (let k in msg.chunks)
         this.chunks[k] = new Uint8Array(Object.values(msg.chunks[k]));
     } else if (msg.type === "SYNC") {
       this.players = msg.players;
       this.drops = msg.drops;
-      this.mobs = msg.mobs || {};
-      this.time = msg.time || 0;
+      this.time = msg.time;
       this.updateUI();
     } else if (msg.type === "BLOCK") {
       this.setBlock(msg.x, msg.y, msg.id);
     } else if (this.net.isHost) {
-      // Host Logic
       if (msg.type === "INPUT") {
         const p = this.players[sender];
-        if (p && p.hp > 0) {
+        if (p) {
           if (msg.keys.a) p.vx = -5;
           if (msg.keys.d) p.vx = 5;
           if (msg.keys.w && p.grounded) p.vy = -10;
@@ -965,71 +716,37 @@ class Game {
       if (msg.type === "PLACE") {
         const p = this.players[sender];
         const item = p.inv[msg.slot];
-        if (item.id && item.count > 0) {
+        if (item.id && item.count > 0 && !this.isSolid(msg.x, msg.y)) {
           this.setBlock(msg.x, msg.y, item.id);
           item.count--;
           if (item.count <= 0) item.id = 0;
         }
       }
-      if (msg.type === "DROP") {
-        this.drops.push({
-          id: Math.random(),
-          x: msg.x,
-          y: msg.y,
-          itemId: msg.id,
-          vx: (Math.random() - 0.5) * 5,
-          vy: -4,
-          life: 6000,
-        });
-      }
-      if (msg.type === "EXPLODE") {
-        for (let dy = -3; dy <= 3; dy++)
-          for (let dx = -3; dx <= 3; dx++) {
-            if (dx * dx + dy * dy < 10)
-              this.setBlock(msg.x + dx, msg.y + dy, 0);
+      if (msg.type === "MINE") {
+        const id = this.getBlock(msg.x, msg.y);
+        if (id && !BLOCKS[id].unbreakable) {
+          this.setBlock(msg.x, msg.y, 0); // Remove block
+          // Handle TNT Explosion
+          if (BLOCKS[id].name === "TNT") {
+            this.net.broadcast({ type: "EXPLODE_FX", x: msg.x, y: msg.y });
+            for (let dy = -3; dy <= 3; dy++)
+              for (let dx = -3; dx <= 3; dx++) {
+                if (dx * dx + dy * dy < 8)
+                  this.setBlock(msg.x + dx, msg.y + dy, 0);
+              }
           }
-      }
-      if (msg.type === "HIT") {
-        const attacker = this.players[sender];
-        const power = 2; // Calculate based on tool later
-        if (msg.targetType === "player") {
-          const target = this.players[msg.targetId];
-          if (target) {
-            target.hp -= power;
-            target.vx = target.x - attacker.x > 0 ? 10 : -10;
-            target.vy = -5;
-            if (target.hp <= 0) this.killPlayer(msg.targetId);
-          }
-        } else {
-          const mob = this.mobs[msg.targetId];
-          if (mob) {
-            mob.hp -= power;
-            mob.vx = mob.x - attacker.x > 0 ? 5 : -5;
-            mob.vy = -5;
-            if (mob.hp <= 0) {
-              if (mob.type === "cow")
-                this.drops.push({
-                  id: Math.random(),
-                  x: mob.x,
-                  y: mob.y,
-                  itemId: 302,
-                  vx: 0,
-                  vy: -3,
-                  life: 6000,
-                }); // Steak
-              delete this.mobs[msg.targetId];
-            }
-          }
-        }
-      }
-      if (msg.type === "EAT") {
-        const p = this.players[sender];
-        const item = p.inv[msg.slot];
-        if (item && ITEMS[item.id].food) {
-          p.food = Math.min(20, p.food + ITEMS[item.id].food);
-          p.hp = Math.min(20, p.hp + 2);
-          item.count--;
-          if (item.count <= 0) item.id = 0;
+          // Generate Drop
+          let did = BLOCKS[id].drop || id;
+          if (did)
+            this.drops.push({
+              id: Math.random(),
+              x: msg.x * 48 + 24,
+              y: msg.y * 48 + 24,
+              itemId: did,
+              vx: (Math.random() - 0.5) * 4,
+              vy: -5,
+              life: 6000,
+            });
         }
       }
     }
@@ -1041,120 +758,85 @@ class Game {
       this.net.sendTo(this.net.hostId, { type: "INPUT", keys: this.keys });
   }
 
-  // --- 描画 ---
   render() {
     if (!this.players[this.net.myId]) return;
     const p = this.players[this.net.myId];
     this.cam.x += (p.x - this.width / 2 - this.cam.x) * 0.1;
     this.cam.y += (p.y - this.height / 2 - this.cam.y) * 0.1;
 
-    // Day/Night Cycle Sky
-    const dayTime = this.time % 24000;
-    let skyColor = "#87CEEB";
-    let light = 1.0;
-    if (dayTime > 12000) {
-      skyColor = "#1a237e";
-      light = 0.4;
-    } // Night
-
-    this.ctx.fillStyle = skyColor;
+    this.ctx.fillStyle = this.time % 24000 > 12000 ? "#1a237e" : "#87CEEB";
     this.ctx.fillRect(0, 0, this.width, this.height);
 
-    const startCX = Math.floor(this.cam.x / TILE_SIZE / CHUNK_SIZE);
-    const endCX = startCX + Math.ceil(this.width / TILE_SIZE / CHUNK_SIZE) + 1;
-    const startCY = Math.floor(this.cam.y / TILE_SIZE / CHUNK_SIZE);
-    const endCY = startCY + Math.ceil(this.height / TILE_SIZE / CHUNK_SIZE) + 1;
+    const startCX = Math.floor(this.cam.x / 48 / 16),
+      endCX = startCX + Math.ceil(this.width / 48 / 16) + 1;
+    const startCY = Math.floor(this.cam.y / 48 / 16),
+      endCY = startCY + Math.ceil(this.height / 48 / 16) + 1;
 
-    // Blocks
-    for (let cy = startCY; cy <= endCY; cy++) {
+    for (let cy = startCY; cy <= endCY; cy++)
       for (let cx = startCX; cx <= endCX; cx++) {
         const chunk = this.chunks[this.getChunkKey(cx, cy)];
         if (!chunk) continue;
-        for (let y = 0; y < CHUNK_SIZE; y++) {
-          for (let x = 0; x < CHUNK_SIZE; x++) {
-            const id = chunk[y * CHUNK_SIZE + x];
-            if (id !== 0 && this.assets.blocks[id]) {
-              const wx = (cx * CHUNK_SIZE + x) * TILE_SIZE;
-              const wy = (cy * CHUNK_SIZE + y) * TILE_SIZE;
-              // ★ FIX: Draw Image with TILE_SIZE scaling
-              this.ctx.drawImage(
-                this.assets.blocks[id],
-                Math.floor(wx - this.cam.x),
-                Math.floor(wy - this.cam.y),
-                TILE_SIZE,
-                TILE_SIZE
-              );
-
-              // Darkness overlay
-              if (light < 1.0) {
-                this.ctx.fillStyle = `rgba(0,0,0,${1 - light})`;
-                this.ctx.fillRect(
-                  Math.floor(wx - this.cam.x),
-                  Math.floor(wy - this.cam.y),
-                  TILE_SIZE,
-                  TILE_SIZE
-                );
-              }
-            }
-          }
+        for (let i = 0; i < 256; i++) {
+          const id = chunk[i];
+          if (id === 0) continue;
+          const x = (cx * 16 + (i % 16)) * 48,
+            y = (cy * 16 + Math.floor(i / 16)) * 48;
+          if (this.assets.blocks[id])
+            this.ctx.drawImage(
+              this.assets.blocks[id],
+              Math.floor(x - this.cam.x),
+              Math.floor(y - this.cam.y),
+              48,
+              48
+            );
         }
       }
-    }
-
-    // Selection Box
-    if (this.mining.active || !this.mining.active) {
-      // Always show cursor
-      const mx = this.mouse.x + this.cam.x,
-        my = this.mouse.y + this.cam.y;
-      const bx = Math.floor(mx / TILE_SIZE),
-        by = Math.floor(my / TILE_SIZE);
-      const wx = bx * TILE_SIZE - this.cam.x;
-      const wy = by * TILE_SIZE - this.cam.y;
-      this.ctx.strokeStyle = "rgba(255,255,255,0.5)";
-      this.ctx.lineWidth = 2;
-      this.ctx.strokeRect(wx, wy, TILE_SIZE, TILE_SIZE);
-    }
-
-    // Drops
     this.drops.forEach((d) => {
-      const i = this.assets.blocks[d.itemId] || this.assets.items[d.itemId];
-      if (i) this.ctx.drawImage(i, d.x - this.cam.x, d.y - this.cam.y, 20, 20);
+      const i = this.assets.items[d.itemId] || this.assets.blocks[d.itemId];
+      if (i)
+        this.ctx.drawImage(
+          i,
+          d.x - this.cam.x - 10,
+          d.y - this.cam.y - 10,
+          20,
+          20
+        );
     });
-
-    // Mobs
-    for (let id in this.mobs) {
-      const m = this.mobs[id];
-      this.ctx.fillStyle = m.type === "zombie" ? "#2e7d32" : "#795548";
-      this.ctx.fillRect(m.x - this.cam.x, m.y - this.cam.y, 32, 48);
-      // Eyes
-      this.ctx.fillStyle = "white";
-      this.ctx.fillRect(m.x - this.cam.x + 4, m.y - this.cam.y + 8, 8, 8);
-      this.ctx.fillRect(m.x - this.cam.x + 20, m.y - this.cam.y + 8, 8, 8);
-    }
-
-    // Players
     for (let id in this.players) {
       const ply = this.players[id];
-      const px = ply.x - this.cam.x,
-        py = ply.y - this.cam.y;
-      this.ctx.fillStyle = id === this.net.myId ? "#29b6f6" : "#ccc"; // Blue for self
-      this.ctx.fillRect(px, py, 24, 54);
-      // Name (Debugging)
-      // this.ctx.fillStyle = "white"; this.ctx.fillText(id.substr(0,4), px, py-10);
+      this.ctx.fillStyle = id === this.net.myId ? "#29b6f6" : "#ccc";
+      this.ctx.fillRect(ply.x - this.cam.x, ply.y - this.cam.y, 24, 54);
     }
-
-    // Time Info
-    document.getElementById("time-info").innerText =
-      dayTime < 12000 ? "Day" : "Night";
-
+    // Crosshair (Mobile Only)
+    if (window.innerWidth < 1024) {
+      this.ctx.strokeStyle = "rgba(255,255,255,0.8)";
+      this.ctx.lineWidth = 2;
+      this.ctx.beginPath();
+      this.ctx.moveTo(this.width / 2 - 10, this.height / 2);
+      this.ctx.lineTo(this.width / 2 + 10, this.height / 2);
+      this.ctx.moveTo(this.width / 2, this.height / 2 - 10);
+      this.ctx.lineTo(this.width / 2, this.height / 2 + 10);
+      this.ctx.stroke();
+    } else {
+      // Desktop Cursor Highlight
+      const mx = this.mouse.x + this.cam.x,
+        my = this.mouse.y + this.cam.y;
+      this.ctx.strokeStyle = "white";
+      this.ctx.strokeRect(
+        Math.floor(mx / 48) * 48 - this.cam.x,
+        Math.floor(my / 48) * 48 - this.cam.y,
+        48,
+        48
+      );
+    }
     this.sendInput();
   }
 
-  // --- UI更新 ---
+  // Inventory UI Methods (Shortened)
   drawSlot(el, it) {
     el.innerHTML = "";
-    if (it.id !== 0) {
-      const i = this.assets.blocks[it.id] || this.assets.items[it.id];
+    if (it.id) {
+      const i = this.assets.items[it.id] || this.assets.blocks[it.id];
       if (i) {
         const c = document.createElement("canvas");
         c.width = 32;
@@ -1162,13 +844,34 @@ class Game {
         c.getContext("2d").drawImage(i, 0, 0);
         el.appendChild(c);
       }
-      const span = document.createElement("span");
-      span.className = "count";
-      span.innerText = it.count;
-      el.appendChild(span);
+      const s = document.createElement("span");
+      s.className = "count";
+      s.innerText = it.count;
+      el.appendChild(s);
     }
   }
   initInvUI() {
+    const mkSlot = (p, i) => {
+      const d = document.createElement("div");
+      d.className = "slot";
+      d.onclick = () => {
+        if (this.selectedInvSlot !== -1) {
+          const pl = this.players[this.net.myId];
+          const it = pl.inv[this.selectedInvSlot];
+          if (it.id && it.count) {
+            it.count--;
+            if (this.craftGrid[i].id === it.id) this.craftGrid[i].count++;
+            else this.craftGrid[i] = { id: it.id, count: 1 };
+            if (it.count <= 0)
+              pl.inv[this.selectedInvSlot] = { id: 0, count: 0 };
+            this.checkCrafting();
+            this.updateUI();
+            this.updateCraftUI();
+          }
+        }
+      };
+      p.appendChild(d);
+    };
     const g = document.getElementById("inv-grid");
     g.innerHTML = "";
     for (let i = 0; i < 9; i++) {
@@ -1182,47 +885,53 @@ class Game {
     }
     const cg = document.getElementById("craft-grid");
     cg.innerHTML = "";
-    for (let i = 0; i < 9; i++) {
-      const d = document.createElement("div");
-      d.className = "slot";
-      d.onclick = () => {
-        if (this.selectedInvSlot !== -1) {
-          const p = this.players[this.net.myId];
-          const item = p.inv[this.selectedInvSlot];
-          if (item.id !== 0 && item.count > 0) {
-            item.count--;
-            if (this.craftGrid[i].id === item.id) this.craftGrid[i].count++;
-            else this.craftGrid[i] = { id: item.id, count: 1 };
-            if (item.count <= 0)
-              p.inv[this.selectedInvSlot] = { id: 0, count: 0 };
-            this.checkCrafting();
-            this.updateUI();
-            this.updateCraftUI();
-          }
-        }
-      };
-      d.oncontextmenu = (e) => {
-        // Retrieve item
-        e.preventDefault();
-        if (this.craftGrid[i].id !== 0) {
-          this.giveItem(
-            this.net.myId,
-            this.craftGrid[i].id,
-            this.craftGrid[i].count
-          );
-          this.craftGrid[i] = { id: 0, count: 0 };
-          this.checkCrafting();
-          this.updateUI();
-          this.updateCraftUI();
-        }
-      };
-      cg.appendChild(d);
-    }
+    for (let i = 0; i < 9; i++) mkSlot(cg, i);
     document.getElementById("craft-result-slot").onclick = () => {
-      this.craftItem();
-      this.updateUI();
-      this.updateCraftUI();
+      if (this.craftResult.id) {
+        for (let i = 0; i < 9; i++)
+          if (this.craftGrid[i].id) {
+            this.craftGrid[i].count--;
+            if (this.craftGrid[i].count <= 0)
+              this.craftGrid[i] = { id: 0, count: 0 };
+          }
+        this.giveItem(
+          this.net.myId,
+          this.craftResult.id,
+          this.craftResult.count
+        );
+        this.checkCrafting();
+        this.updateUI();
+        this.updateCraftUI();
+      }
     };
+  }
+  checkCrafting() {
+    /* (Same simple crafting logic) */
+    const g = this.craftGrid.map((s) => s.id);
+    for (let r of RECIPES) {
+      if (r.shapeless) {
+        /* shapeless check */ const inIds = r.in.slice();
+        const gIds = g.filter((x) => x);
+        if (
+          inIds.length === gIds.length &&
+          inIds.every((x) => gIds.includes(x))
+        ) {
+          this.craftResult = { id: r.out.id, count: r.out.count };
+          this.updateCraftUI();
+          return;
+        }
+      } else if (r.pattern) {
+        let m = true;
+        for (let i = 0; i < 9; i++) if (g[i] !== r.pattern[i]) m = false;
+        if (m) {
+          this.craftResult = { id: r.out.id, count: r.out.count };
+          this.updateCraftUI();
+          return;
+        }
+      }
+    }
+    this.craftResult = { id: 0, count: 0 };
+    this.updateCraftUI();
   }
   updateUI() {
     const p = this.players[this.net.myId];
@@ -1230,37 +939,36 @@ class Game {
     document.getElementById("health-bar").style.width =
       (p.hp / p.maxHp) * 100 + "%";
     document.getElementById("food-bar").style.width =
-      (p.food / p.maxFood) * 100 + "%"; // Update Food Bar
-
-    const bar = document.getElementById("inventory-bar");
-    bar.innerHTML = "";
+      (p.food / p.maxFood) * 100 + "%";
+    const b = document.getElementById("inventory-bar");
+    b.innerHTML = "";
     p.inv.forEach((it, i) => {
       const d = document.createElement("div");
       d.className = `slot ${i === this.selSlot ? "active" : ""}`;
       this.drawSlot(d, it);
-      bar.appendChild(d);
+      b.appendChild(d);
     });
-    const grid = document.getElementById("inv-grid").children;
+    const g = document.getElementById("inv-grid").children;
     p.inv.forEach((it, i) => {
-      this.drawSlot(grid[i], it);
-      grid[i].style.borderColor = i === this.selectedInvSlot ? "#0f0" : "#444";
+      this.drawSlot(g[i], it);
+      g[i].style.borderColor = i === this.selectedInvSlot ? "#0f0" : "#444";
     });
   }
   updateCraftUI() {
-    const grid = document.getElementById("craft-grid").children;
-    this.craftGrid.forEach((it, i) => this.drawSlot(grid[i], it));
-    const resEl = document.getElementById("craft-result-slot");
-    this.drawSlot(resEl, this.craftResult);
-    resEl.style.cursor = this.craftResult.id !== 0 ? "pointer" : "default";
+    const g = document.getElementById("craft-grid").children;
+    this.craftGrid.forEach((it, i) => this.drawSlot(g[i], it));
+    this.drawSlot(
+      document.getElementById("craft-result-slot"),
+      this.craftResult
+    );
   }
   toggleInv() {
     const s = document.getElementById("inventory-screen");
-    if (s.style.display === "none") {
-      s.style.display = "flex";
+    s.style.display = s.style.display === "none" ? "flex" : "none";
+    if (s.style.display === "flex") {
       this.selectedInvSlot = -1;
       this.updateUI();
-      this.updateCraftUI();
-    } else s.style.display = "none";
+    }
   }
 }
 window.onload = () => new Game();
