@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FullStackCraft v2 - High Graphics</title>
+    <title>FullStackCraft v3 - Mining Update</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <div id="ui-layer">
       <div id="login-screen">
-        <h1>FullStackCraft v2</h1>
-        <p style="color: #aaa">Procedural Terrain & Enhanced Graphics</p>
+        <h1>FullStackCraft v3</h1>
+        <p style="color: #ddd">New: Mining Speed, Tool Tiers, Combat</p>
         <input
           type="text"
           id="room-input"
@@ -18,7 +18,7 @@
           value="world1"
         />
         <button id="start-btn">Enter World</button>
-        <p>WASD: Move | Click: Dig/Place | E: Inventory | F: Attack</p>
+        <p>Hold Click: Mine | Click Entity: Attack</p>
       </div>
       <div id="game-ui" style="display: none">
         <div id="debug-info">FPS: 0</div>
@@ -26,16 +26,11 @@
         <div id="health-container">
           <div id="health-bar"></div>
         </div>
+        <!-- インベントリ画面 -->
         <div id="inventory-screen" style="display: none">
           <div class="panel">
-            <h2>Backpack</h2>
+            <h2>Inventory</h2>
             <div id="inv-grid"></div>
-          </div>
-          <div class="panel">
-            <h2>Crafting</h2>
-            <div id="craft-grid"></div>
-            <div id="craft-arrow">➡</div>
-            <div id="craft-result"></div>
           </div>
         </div>
       </div>
