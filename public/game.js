@@ -1,6 +1,5 @@
 /**
- * FullStackCraft v14 - The Universe Update
- * 65+ Items, Biomes, Day/Night, Save System
+ * FullStackCraft v14.1 - Fixes (Broadcast Error & Inventory Reference Bug)
  */
 
 const TILE_SIZE = 48;
@@ -577,6 +576,7 @@ class Game {
     this.loop();
   }
   spawn(x, y) {
+    // ★ FIX: Use Array.from to create independent objects for inventory
     this.players[this.net.myId] = {
       id: this.net.myId,
       x,
@@ -585,7 +585,7 @@ class Game {
       vy: 0,
       hp: 20,
       maxHp: 20,
-      inv: Array(27).fill({ id: 0, count: 0 }),
+      inv: Array.from({ length: 27 }, () => ({ id: 0, count: 0 })),
     };
     this.cam.x = x;
     this.cam.y = y;
@@ -674,9 +674,6 @@ class Game {
             d[(y - 1) * CHUNK_SIZE + x] = 8;
             d[(y - 2) * CHUNK_SIZE + x] = 8;
           } // Cactus
-        } else if (wy > 55 && biome > 0.3) {
-          // Underground Water in desert
-          // Skipped for simplicity
         }
         if (d[y * CHUNK_SIZE + x] === 0) d[y * CHUNK_SIZE + x] = id;
       }
@@ -701,6 +698,7 @@ class Game {
       const lx = ((gx % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE,
         ly = ((gy % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
       this.chunks[k][ly * CHUNK_SIZE + lx] = id;
+      // ★ FIX: Use this.net.broadcast (not bc)
       if (this.net.isHost)
         this.net.broadcast({ type: "BLOCK", x: gx, y: gy, id });
     }
@@ -1194,12 +1192,13 @@ class Network {
     }; // Simplified init
     dc.onmessage = (e) => this.onPacket(JSON.parse(e.data), tid);
   }
+  // ★ FIX: Use broadcast name correctly
   send(msg) {
-    if (this.isHost) this.bc(msg);
+    if (this.isHost) this.broadcast(msg);
     else if (this.hostId && this.channels[this.hostId])
       this.channels[this.hostId].send(JSON.stringify(msg));
   }
-  bc(msg) {
+  broadcast(msg) {
     const s = JSON.stringify(msg);
     for (let id in this.channels) this.channels[id].send(s);
   }
@@ -1208,7 +1207,7 @@ class Network {
     if (m.type === "MINE") {
       if (this.isHost) {
         this.game.setBlock(m.x, m.y, 0);
-        this.bc({ type: "BLOCK", x: m.x, y: m.y, id: 0 });
+        this.broadcast({ type: "BLOCK", x: m.x, y: m.y, id: 0 });
       }
     } else if (m.type === "BLOCK") this.game.setBlock(m.x, m.y, m.id);
     else if (m.type === "SYNC") {
