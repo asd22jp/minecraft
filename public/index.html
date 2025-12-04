@@ -2,8 +2,11 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FullStackCraft v20 - Super Update</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>FullStackCraft v21 - Mobile & Fixes</title>
     <style>
       body {
         margin: 0;
@@ -11,6 +14,8 @@
         background: #000;
         font-family: "Consolas", sans-serif;
         user-select: none;
+        -webkit-user-select: none;
+        touch-action: none; /* スマホでのスクロール無効化 */
       }
       #ui-layer {
         position: absolute;
@@ -20,19 +25,21 @@
         height: 100%;
         pointer-events: none;
       }
+
+      /* Login Screen */
       #login-screen {
         position: absolute;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
         background: linear-gradient(135deg, #222, #444);
-        padding: 40px;
+        padding: 30px;
         border-radius: 12px;
         text-align: center;
         color: white;
         pointer-events: auto;
-        box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
         border: 2px solid #ffd700;
+        z-index: 100;
       }
       input,
       button {
@@ -48,46 +55,42 @@
       button {
         background: #ffca28;
         color: #000;
-        cursor: pointer;
         font-weight: bold;
-      }
-      button:hover {
-        background: #ffb300;
+        cursor: pointer;
       }
 
+      /* HUD */
       #hud-top {
         position: absolute;
         top: 10px;
         left: 10px;
         color: white;
         text-shadow: 2px 2px 0 #000;
-        font-size: 16px;
+        font-size: 14px;
       }
+
       #inventory-bar {
         position: absolute;
-        bottom: 20px;
+        bottom: 10px;
         left: 50%;
         transform: translateX(-50%);
-        background: rgba(0, 0, 0, 0.7);
-        padding: 6px;
+        background: rgba(0, 0, 0, 0.6);
+        padding: 5px;
         border-radius: 8px;
         display: flex;
-        gap: 6px;
+        gap: 4px;
         pointer-events: auto;
+        z-index: 10;
       }
       .slot {
-        width: 48px;
-        height: 48px;
+        width: 40px;
+        height: 40px;
         background: rgba(255, 255, 255, 0.1);
         border: 2px solid #555;
         position: relative;
-        cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-      }
-      .slot:hover {
-        background: rgba(255, 255, 255, 0.2);
       }
       .slot.active {
         border-color: #ffd700;
@@ -95,53 +98,39 @@
       }
       .count {
         position: absolute;
-        bottom: 2px;
+        bottom: 0;
         right: 2px;
         color: white;
-        font-size: 12px;
+        font-size: 10px;
         font-weight: bold;
-        text-shadow: 1px 1px 0 #000;
       }
 
-      /* ステータスバー（HP & 食料） */
       #status-container {
         position: absolute;
-        bottom: 90px;
+        bottom: 70px;
         left: 50%;
         transform: translateX(-50%);
-        width: 300px;
+        width: 200px;
         display: flex;
         flex-direction: column;
-        gap: 5px;
+        gap: 4px;
       }
       .bar-bg {
         width: 100%;
-        height: 16px;
+        height: 12px;
         background: #222;
-        border: 2px solid #fff;
+        border: 1px solid #fff;
         position: relative;
       }
       #health-bar {
         width: 100%;
         height: 100%;
         background: #d32f2f;
-        transition: width 0.2s;
       }
       #food-bar {
         width: 100%;
         height: 100%;
         background: #d84315;
-        transition: width 0.2s;
-      } /* 茶色/オレンジ */
-      .bar-label {
-        position: absolute;
-        top: 0;
-        left: 50%;
-        transform: translateX(-50%);
-        font-size: 10px;
-        color: white;
-        text-shadow: 1px 1px 0 #000;
-        line-height: 16px;
       }
 
       #mining-bar-container {
@@ -161,19 +150,21 @@
         background: #76ff03;
       }
 
+      /* Inventory Screen */
       #inventory-screen {
         position: absolute;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        background: rgba(30, 30, 30, 0.98);
-        padding: 30px;
+        background: rgba(30, 30, 30, 0.95);
+        padding: 20px;
         border-radius: 12px;
         border: 2px solid #fff;
         display: none;
-        gap: 40px;
+        gap: 20px;
         pointer-events: auto;
         color: white;
+        z-index: 20;
       }
       .panel {
         display: flex;
@@ -183,17 +174,14 @@
       #inv-grid,
       #craft-grid {
         display: grid;
-        gap: 6px;
+        gap: 5px;
       }
       #inv-grid {
-        grid-template-columns: repeat(9, 48px);
+        grid-template-columns: repeat(9, 40px);
       }
       #craft-grid {
-        grid-template-columns: repeat(3, 48px);
+        grid-template-columns: repeat(3, 40px);
         margin-bottom: 10px;
-      }
-      #craft-result-slot {
-        border-color: gold;
       }
 
       canvas {
@@ -202,29 +190,75 @@
         width: 100%;
         height: 100%;
       }
-      #death-screen {
+
+      /* Mobile Controls */
+      .mob-btn {
         position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(100, 0, 0, 0.5);
-        display: none;
+        width: 60px;
+        height: 60px;
+        background: rgba(255, 255, 255, 0.15);
+        border: 2px solid rgba(255, 255, 255, 0.5);
+        border-radius: 50%;
+        color: white;
+        font-weight: bold;
+        font-size: 20px;
+        display: flex;
         align-items: center;
         justify-content: center;
-        flex-direction: column;
-        color: white;
-        font-size: 40px;
         pointer-events: auto;
+        user-select: none;
+      }
+      .mob-btn:active {
+        background: rgba(255, 255, 255, 0.4);
+      }
+
+      #ctrl-left {
+        bottom: 30px;
+        left: 20px;
+      }
+      #ctrl-right {
+        bottom: 30px;
+        left: 100px;
+      }
+      #ctrl-jump {
+        bottom: 100px;
+        right: 20px;
+        background: rgba(100, 200, 255, 0.2);
+      }
+      #ctrl-mine {
+        bottom: 30px;
+        right: 100px;
+        background: rgba(255, 100, 100, 0.2);
+        font-size: 14px;
+      }
+      #ctrl-place {
+        bottom: 30px;
+        right: 20px;
+        background: rgba(100, 255, 100, 0.2);
+        font-size: 14px;
+      }
+      #ctrl-inv {
+        top: 10px;
+        right: 10px;
+        width: 40px;
+        height: 40px;
+        font-size: 12px;
+        border-radius: 8px;
+      }
+
+      /* Desktop hide */
+      @media (min-width: 1024px) {
+        .mob-btn {
+          display: none;
+        }
       }
     </style>
   </head>
   <body>
     <div id="ui-layer">
       <div id="login-screen">
-        <h1>FullStackCraft v20</h1>
-        <p style="color: #ffd700">SUPER UPDATE</p>
-        <p>Mobs, PvP, Hunger, New Biomes</p>
+        <h2>FullStackCraft v21</h2>
+        <p>Mobile Support & Bug Fixes</p>
         <input
           type="text"
           id="room-input"
@@ -239,38 +273,43 @@
           <span id="time-info">Time: Day</span>
         </div>
         <div id="inventory-bar"></div>
-
         <div id="status-container">
-          <div class="bar-bg">
-            <div id="health-bar"></div>
-            <span class="bar-label">HP</span>
-          </div>
-          <div class="bar-bg">
-            <div id="food-bar"></div>
-            <span class="bar-label">Food</span>
-          </div>
+          <div class="bar-bg"><div id="health-bar"></div></div>
+          <div class="bar-bg"><div id="food-bar"></div></div>
         </div>
-
         <div id="mining-bar-container">
           <div id="mining-bar"></div>
         </div>
 
+        <!-- Mobile Controls -->
+        <div id="ctrl-left" class="mob-btn">◀</div>
+        <div id="ctrl-right" class="mob-btn">▶</div>
+        <div id="ctrl-jump" class="mob-btn">J</div>
+        <div id="ctrl-mine" class="mob-btn">MINE</div>
+        <div id="ctrl-place" class="mob-btn">BUILD</div>
+        <div id="ctrl-inv" class="mob-btn">INV</div>
+
         <div id="inventory-screen">
           <div class="panel">
-            <h2>Backpack</h2>
+            <h3>Bag</h3>
             <div id="inv-grid"></div>
           </div>
           <div class="panel">
-            <h2>Crafting</h2>
+            <h3>Craft</h3>
             <div id="craft-grid"></div>
-            <div style="font-size: 24px; margin: 5px">➡</div>
-            <div id="craft-result-slot" class="slot"></div>
+            <div
+              id="craft-result-slot"
+              class="slot"
+              style="border-color: gold"
+            ></div>
           </div>
+          <button
+            onclick="document.getElementById('inventory-screen').style.display='none'"
+            style="margin-top: 20px; width: 100px"
+          >
+            Close
+          </button>
         </div>
-      </div>
-      <div id="death-screen">
-        <div>YOU DIED</div>
-        <button onclick="window.location.reload()">Respawn</button>
       </div>
     </div>
     <canvas id="game-canvas"></canvas>
