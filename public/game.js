@@ -1,280 +1,147 @@
 /**
- * FullStackCraft v8 - High-End Graphics & Physics
- * Procedural Textures, Particles, Fluid Drops
+ * FullStackCraft v9 - Infinite Chunks & Balanced Mining
  */
 
-const TILE_SIZE = 48; // Increased resolution
+const TILE_SIZE = 48;
 const CHUNK_SIZE = 16;
-const WORLD_WIDTH = 100;
-const WORLD_HEIGHT = 80;
-const GRAVITY = 0.6;
+const GRAVITY = 0.5;
 
-// --- BLOCK DEFINITIONS ---
-// type: generation style
+// --- BALANCED BLOCK DEFINITIONS ---
+// Hardness: 1 sec = 60 frames.
+// Wood (Hand) = 5 sec = 300 frames.
 const BLOCKS = {
   0: { name: "Air", solid: false },
-  1: { name: "Grass", solid: true, hardness: 20, type: "grass" },
-  2: {
-    name: "Dirt",
-    solid: true,
-    hardness: 15,
-    type: "noise",
-    color: "#5d4037",
-  },
-  3: {
-    name: "Stone",
-    solid: true,
-    hardness: 60,
-    type: "noise",
-    color: "#757575",
-  },
-  4: {
-    name: "Sand",
-    solid: true,
-    hardness: 15,
-    type: "noise",
-    color: "#fff59d",
-  },
-  5: {
-    name: "Log",
-    solid: true,
-    hardness: 40,
-    type: "column",
-    color: "#4e342e",
-  },
-  6: {
-    name: "Leaves",
-    solid: true,
-    hardness: 5,
-    type: "noise",
-    color: "#388e3c",
-  },
-  7: {
-    name: "Water",
-    solid: false,
-    fluid: true,
-    type: "liquid",
-    color: "rgba(33,150,243,0.6)",
-  },
-  8: {
-    name: "Planks",
-    solid: true,
-    hardness: 30,
-    type: "plank",
-    color: "#8d6e63",
-  },
-  9: {
-    name: "Brick",
-    solid: true,
-    hardness: 80,
-    type: "brick",
-    color: "#bf360c",
-  },
-  10: {
-    name: "Glass",
-    solid: true,
-    hardness: 10,
-    type: "glass",
-    color: "rgba(200,240,255,0.3)",
-  },
-  11: {
-    name: "CoalOre",
-    solid: true,
-    hardness: 80,
-    type: "ore",
-    color: "#212121",
-    base: 3,
-  },
-  12: {
-    name: "IronOre",
-    solid: true,
-    hardness: 100,
-    type: "ore",
-    color: "#d7ccc8",
-    base: 3,
-  },
-  13: {
-    name: "GoldOre",
-    solid: true,
-    hardness: 120,
-    type: "ore",
-    color: "#ffca28",
-    base: 3,
-  },
-  14: {
-    name: "DiamondOre",
+  1: {
+    name: "Grass",
+    color: "#5b8a36",
     solid: true,
     hardness: 180,
-    type: "ore",
-    color: "#00e5ff",
-    base: 3,
-  },
-  15: {
-    name: "Cactus",
+    type: "grass",
+  }, // 3s
+  2: {
+    name: "Dirt",
+    color: "#704828",
     solid: true,
-    hardness: 20,
-    type: "column",
-    color: "#64dd17",
-  },
-  51: {
-    name: "Bedrock",
-    solid: true,
-    unbreakable: true,
+    hardness: 180,
     type: "noise",
-    color: "#000000",
+  }, // 3s
+  3: {
+    name: "Stone",
+    color: "#757575",
+    solid: true,
+    hardness: 600,
+    type: "noise",
+    reqTool: "pickaxe",
+  }, // 10s (Hand)
+  4: {
+    name: "Wood",
+    color: "#5d4037",
+    solid: true,
+    hardness: 300,
+    type: "column",
+    reqTool: "axe",
+  }, // 5s (Hand)
+  5: {
+    name: "Leaves",
+    color: "#388e3c",
+    solid: true,
+    hardness: 15,
+    type: "noise",
+  }, // 0.25s
+  6: {
+    name: "Planks",
+    color: "#8d6e63",
+    solid: true,
+    hardness: 200,
+    type: "plank",
+    reqTool: "axe",
+  },
+  7: {
+    name: "Bedrock",
+    color: "#000",
+    solid: true,
+    hardness: Infinity,
+    unbreakable: true,
+  },
+  11: {
+    name: "Coal",
+    color: "#222",
+    solid: true,
+    hardness: 700,
+    type: "ore",
+    oreColor: "#111",
+  },
+  12: {
+    name: "Iron",
+    color: "#aaa",
+    solid: true,
+    hardness: 800,
+    type: "ore",
+    oreColor: "#dcb",
+  },
+  13: {
+    name: "Gold",
+    color: "#dd0",
+    solid: true,
+    hardness: 900,
+    type: "ore",
+    oreColor: "#fe0",
+  },
+  14: {
+    name: "Diamond",
+    color: "#0ee",
+    solid: true,
+    hardness: 1200,
+    type: "ore",
+    oreColor: "#0ff",
   },
 };
 
 const ITEMS = {
   0: { name: "Air" },
-  1: { name: "Hand", power: 1 },
-  2: { name: "Pickaxe", power: 5, iconColor: "#8d6e63" }, // Wood
-  3: { name: "IronPick", power: 10, iconColor: "#bdbdbd" },
-  4: { name: "DiaPick", power: 20, iconColor: "#00e5ff" },
-  5: { name: "Axe", power: 5, iconColor: "#8d6e63" },
+  1: { name: "Hand", power: 1.0 },
+  2: {
+    name: "WoodPick",
+    power: 5.0,
+    type: "tool",
+    toolType: "pickaxe",
+    iconColor: "#8d6e63",
+  }, // Stone: 600/5 = 120f (2s)
+  3: {
+    name: "StonePick",
+    power: 10.0,
+    type: "tool",
+    toolType: "pickaxe",
+    iconColor: "#757575",
+  }, // Stone: 60s/10 = 60f (1s)
+  4: {
+    name: "WoodAxe",
+    power: 5.0,
+    type: "tool",
+    toolType: "axe",
+    iconColor: "#8d6e63",
+  }, // Wood: 300/5 = 60f (1s)
+  5: {
+    name: "Shovel",
+    power: 5.0,
+    type: "tool",
+    toolType: "shovel",
+    iconColor: "#ccc",
+  }, // Dirt: 180/5 = 36f (0.6s)
 };
 
-// --- GRAPHICS ENGINE ---
-class TextureGenerator {
-  static generate(id) {
-    const c = document.createElement("canvas");
-    c.width = TILE_SIZE;
-    c.height = TILE_SIZE;
-    const ctx = c.getContext("2d");
-    const b = BLOCKS[id];
-
-    // Base fill
-    if (b.type !== "glass") {
-      ctx.fillStyle = b.color || "#f0f";
-      ctx.fillRect(0, 0, TILE_SIZE, TILE_SIZE);
-    }
-
-    // Noise
-    if (b.type === "noise" || b.type === "grass" || b.type === "ore") {
-      this.drawNoise(ctx, 0.1);
-    }
-
-    // Specific Patterns
-    if (b.type === "grass") {
-      ctx.fillStyle = "#64dd17"; // Green top
-      ctx.fillRect(0, 0, TILE_SIZE, 12);
-      this.drawNoise(ctx, 0.05);
-      // Grass blades
-      ctx.fillStyle = "#33691e";
-      for (let i = 0; i < 8; i++)
-        ctx.fillRect(Math.random() * TILE_SIZE, Math.random() * 8, 2, 4);
-    } else if (b.type === "column") {
-      // Log, Cactus
-      ctx.fillStyle = "rgba(0,0,0,0.3)";
-      ctx.fillRect(4, 0, 4, TILE_SIZE);
-      ctx.fillRect(TILE_SIZE - 8, 0, 4, TILE_SIZE);
-      if (b.name === "Cactus") {
-        // Spikes
-        ctx.fillStyle = "#000";
-        for (let i = 0; i < 5; i++)
-          ctx.fillRect(
-            Math.random() * TILE_SIZE,
-            Math.random() * TILE_SIZE,
-            2,
-            1
-          );
-      }
-    } else if (b.type === "brick") {
-      ctx.strokeStyle = "rgba(200,200,200,0.5)";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(0, TILE_SIZE / 2);
-      ctx.lineTo(TILE_SIZE, TILE_SIZE / 2);
-      ctx.moveTo(TILE_SIZE / 2, 0);
-      ctx.lineTo(TILE_SIZE / 2, TILE_SIZE / 2);
-      ctx.moveTo(TILE_SIZE / 4, TILE_SIZE / 2);
-      ctx.lineTo(TILE_SIZE / 4, TILE_SIZE);
-      ctx.moveTo(TILE_SIZE * 0.75, TILE_SIZE / 2);
-      ctx.lineTo(TILE_SIZE * 0.75, TILE_SIZE);
-      ctx.stroke();
-    } else if (b.type === "plank") {
-      ctx.fillStyle = "rgba(0,0,0,0.2)";
-      ctx.fillRect(0, 10, TILE_SIZE, 2);
-      ctx.fillRect(0, 25, TILE_SIZE, 2);
-    } else if (b.type === "glass") {
-      ctx.strokeStyle = "rgba(255,255,255,0.8)";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(2, 2, TILE_SIZE - 4, TILE_SIZE - 4);
-      ctx.beginPath();
-      ctx.moveTo(10, 10);
-      ctx.lineTo(20, 20);
-      ctx.stroke();
-    } else if (b.type === "ore") {
-      ctx.fillStyle = b.color;
-      // Gems
-      for (let i = 0; i < 4; i++) {
-        ctx.fillRect(10 + Math.random() * 20, 10 + Math.random() * 20, 8, 8);
-      }
-    }
-
-    // Shadow Gradient (Simulate depth)
-    const grad = ctx.createLinearGradient(0, 0, TILE_SIZE, TILE_SIZE);
-    grad.addColorStop(0, "rgba(255,255,255,0.1)");
-    grad.addColorStop(1, "rgba(0,0,0,0.1)");
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, TILE_SIZE, TILE_SIZE);
-
-    return c;
-  }
-
-  static drawNoise(ctx, intensity) {
-    const id = ctx.getImageData(0, 0, TILE_SIZE, TILE_SIZE);
-    const d = id.data;
-    for (let i = 0; i < d.length; i += 4) {
-      const val = (Math.random() - 0.5) * 255 * intensity;
-      d[i] += val;
-      d[i + 1] += val;
-      d[i + 2] += val;
-    }
-    ctx.putImageData(id, 0, 0);
-  }
-}
-
-// --- PARTICLE SYSTEM ---
-class Particle {
-  constructor(x, y, color) {
-    this.x = x;
-    this.y = y;
-    this.vx = (Math.random() - 0.5) * 5;
-    this.vy = (Math.random() - 0.5) * 5;
-    this.life = 1.0;
-    this.color = color;
-  }
-  update() {
-    this.x += this.vx;
-    this.y += this.vy;
-    this.vy += 0.2; // Gravity
-    this.life -= 0.05;
-  }
-  render(ctx, camX, camY) {
-    ctx.fillStyle = this.color;
-    ctx.globalAlpha = this.life;
-    ctx.fillRect(this.x - camX, this.y - camY, 4, 4);
-    ctx.globalAlpha = 1.0;
-  }
-}
-
-// --- DROP SYSTEM ---
 class Drop {
   constructor(x, y, itemId) {
     this.id = Math.random().toString(36);
     this.x = x;
     this.y = y;
     this.itemId = itemId;
-    this.vx = (Math.random() - 0.5) * 4;
-    this.vy = -5;
-    this.grounded = false;
+    this.vx = (Math.random() - 0.5) * 5;
+    this.vy = -4;
     this.life = 6000;
-    this.bob = Math.random() * Math.PI * 2;
   }
 }
 
-// --- NETWORKING ---
 class Network {
   constructor(game) {
     this.game = game;
@@ -289,10 +156,7 @@ class Network {
     this.socket.on("role-assigned", (d) => {
       this.isHost = d.role === "HOST";
       this.hostId = this.isHost ? this.myId : d.hostId;
-      if (this.isHost) {
-        this.game.genWorld();
-        this.game.start();
-      }
+      if (this.isHost) this.game.start();
     });
     this.socket.on("user-joined", (d) => {
       if (this.isHost) this.connectTo(d.userId, true);
@@ -341,11 +205,7 @@ class Network {
     this.channels[target] = dc;
     dc.onopen = () => {
       if (this.isHost)
-        this.sendTo(target, {
-          type: "INIT",
-          world: this.game.world,
-          players: this.game.players,
-        });
+        this.sendTo(target, { type: "CHUNK_DATA", chunks: this.game.chunks });
     };
     dc.onmessage = (e) => this.game.onPacket(JSON.parse(e.data), target);
   }
@@ -365,25 +225,24 @@ class Network {
   }
 }
 
-// --- MAIN GAME ---
 class Game {
   constructor() {
     this.canvas = document.getElementById("game-canvas");
     this.ctx = this.canvas.getContext("2d");
     this.fitScreen();
 
-    this.world = new Uint8Array(WORLD_WIDTH * WORLD_HEIGHT);
+    // Chunk System: key="x,y" value=Uint8Array(CHUNK_SIZE*CHUNK_SIZE)
+    this.chunks = {};
     this.players = {};
     this.drops = [];
-    this.particles = [];
     this.net = new Network(this);
 
     this.keys = {};
     this.mouse = { x: 0, y: 0, left: false, right: false };
     this.cam = { x: 0, y: 0 };
     this.selSlot = 0;
-
     this.mining = { active: false, bx: 0, by: 0, progress: 0 };
+
     this.assets = { blocks: {}, items: {} };
     this.genAssets();
 
@@ -420,7 +279,6 @@ class Game {
       if (e.button === 2) this.mouse.right = false;
     });
     window.addEventListener("contextmenu", (e) => e.preventDefault());
-
     document.getElementById("start-btn").onclick = () => {
       document.getElementById("login-screen").style.display = "none";
       document.getElementById("game-ui").style.display = "block";
@@ -437,17 +295,57 @@ class Game {
     this.height = this.canvas.height = window.innerHeight;
   }
   start() {
+    this.spawnPlayer(this.net.myId, 0, -200);
     this.loop();
   }
 
   genAssets() {
+    // Procedural Textures
     for (let id in BLOCKS) {
       if (id == 0) continue;
-      this.assets.blocks[id] = TextureGenerator.generate(id);
+      const c = document.createElement("canvas");
+      c.width = TILE_SIZE;
+      c.height = TILE_SIZE;
+      const ctx = c.getContext("2d");
+      const b = BLOCKS[id];
+      ctx.fillStyle = b.color || "#f0f";
+      ctx.fillRect(0, 0, TILE_SIZE, TILE_SIZE);
+
+      // Noise & Detail
+      ctx.fillStyle = "rgba(0,0,0,0.1)";
+      for (let i = 0; i < 20; i++)
+        ctx.fillRect(
+          Math.random() * TILE_SIZE,
+          Math.random() * TILE_SIZE,
+          2,
+          2
+        );
+
+      if (b.type === "grass") {
+        ctx.fillStyle = "#4caf50";
+        ctx.fillRect(0, 0, TILE_SIZE, 10);
+      }
+      if (b.type === "column") {
+        ctx.fillStyle = "rgba(0,0,0,0.2)";
+        ctx.fillRect(6, 0, 6, TILE_SIZE);
+        ctx.fillRect(TILE_SIZE - 12, 0, 6, TILE_SIZE);
+      }
+      if (b.type === "brick") {
+        ctx.strokeStyle = "rgba(255,255,255,0.2)";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(0, 0, TILE_SIZE, TILE_SIZE);
+      }
+      if (b.type === "ore") {
+        ctx.fillStyle = b.oreColor;
+        ctx.fillRect(12, 12, 10, 10);
+        ctx.fillRect(24, 24, 6, 6);
+      }
+
+      this.assets.blocks[id] = c;
     }
-    // Tool Icons
     for (let id in ITEMS) {
-      if (ITEMS[id].type === "tool" || ITEMS[id].type === "weapon") {
+      const it = ITEMS[id];
+      if (it.type === "tool") {
         const c = document.createElement("canvas");
         c.width = 32;
         c.height = 32;
@@ -455,73 +353,123 @@ class Game {
         ctx.translate(16, 16);
         ctx.rotate(-Math.PI / 4);
         ctx.fillStyle = "#5d4037";
-        ctx.fillRect(-2, 0, 4, 14); // Handle
-        ctx.fillStyle = ITEMS[id].iconColor || "#fff";
+        ctx.fillRect(-2, 0, 4, 14);
+        ctx.fillStyle = it.iconColor || "#fff";
         ctx.beginPath();
         ctx.arc(0, -2, 10, Math.PI, 0);
-        ctx.lineTo(0, 4);
-        ctx.fill(); // Pick head
+        ctx.fill();
         this.assets.items[id] = c;
       }
     }
   }
 
-  genWorld() {
-    // Biomes: Plains (flat), Desert (sand), Mountains (high)
-    const noise = (x, f) => Math.sin(x * f);
-    const hMap = [];
-    for (let x = 0; x < WORLD_WIDTH; x++) {
-      let h = 30;
-      if (x < 30) h += noise(x, 0.1) * 5; // Plains
-      else if (x < 60) h += noise(x, 0.05) * 15; // Mountains
-      else h += noise(x, 0.02) * 8; // Desert
-      hMap[x] = Math.floor(40 + h);
+  // --- CHUNK SYSTEM ---
+  getChunkKey(cx, cy) {
+    return `${cx},${cy}`;
+  }
+
+  getChunk(cx, cy) {
+    const key = this.getChunkKey(cx, cy);
+    if (this.chunks[key]) return this.chunks[key];
+    // If host, generate on demand
+    if (this.net.isHost) {
+      const chunk = this.genChunkData(cx, cy);
+      this.chunks[key] = chunk;
+      this.net.broadcast({
+        type: "CHUNK_DATA",
+        chunks: { [key]: Array.from(chunk) },
+      });
+      return chunk;
     }
+    return null;
+  }
 
-    for (let y = 0; y < WORLD_HEIGHT; y++)
-      for (let x = 0; x < WORLD_WIDTH; x++) {
-        const idx = y * WORLD_WIDTH + x;
-        if (y >= WORLD_HEIGHT - 1) {
-          this.world[idx] = 51;
-          continue;
-        }
+  genChunkData(cx, cy) {
+    const data = new Uint8Array(CHUNK_SIZE * CHUNK_SIZE);
+    // Noise Function
+    const noise = (x) => Math.sin(x * 0.1) * 10 + Math.sin(x * 0.03) * 20;
 
-        if (y > hMap[x]) {
-          this.world[idx] = 3; // Stone
-          if (y < hMap[x] + 4) this.world[idx] = x > 60 ? 4 : 2; // Dirt/Sand
+    for (let x = 0; x < CHUNK_SIZE; x++) {
+      const gx = cx * CHUNK_SIZE + x;
+      const h = Math.floor(noise(gx));
 
+      for (let y = 0; y < CHUNK_SIZE; y++) {
+        const gy = cy * CHUNK_SIZE + y;
+        let id = 0;
+
+        // Terrain Generation (No Desert)
+        if (gy > 40) id = 7; // Bedrock deep down
+        else if (gy > h) {
+          id = 3; // Stone
+          if (gy < h + 4) id = 2; // Dirt layer
           // Ores
-          if (this.world[idx] === 3 && Math.random() < 0.05) {
-            const r = Math.random();
-            if (r < 0.6) this.world[idx] = 11;
-            else if (r < 0.9) this.world[idx] = 12;
-            else if (r < 0.98) this.world[idx] = 13;
-            else this.world[idx] = 14;
-          }
-        } else if (y === hMap[x]) {
-          this.world[idx] = x > 60 ? 4 : 1; // Sand or Grass
-          // Trees
-          if (x < 60 && Math.random() < 0.08) this.genTree(x, y - 1);
-          // Cactus
-          if (x > 60 && Math.random() < 0.05) {
-            this.world[(y - 1) * WORLD_WIDTH + x] = 15;
-            this.world[(y - 2) * WORLD_WIDTH + x] = 15;
-          }
+          if (id === 3 && Math.random() < 0.04)
+            id = 11 + Math.floor(Math.random() * 4);
+        } else if (gy === h) {
+          id = 1; // Grass
+          // Trees (Forest)
+          if (Math.random() < 0.1) this.treeQueue(gx, gy - 1);
         }
+
+        if (data[y * CHUNK_SIZE + x] === 0) data[y * CHUNK_SIZE + x] = id;
       }
-    this.spawnPlayer(this.net.myId, 50 * TILE_SIZE, 10 * TILE_SIZE);
+    }
+    return data;
   }
 
-  genTree(x, y) {
-    for (let i = 0; i < 4; i++) this.world[(y - i) * WORLD_WIDTH + x] = 5;
-    for (let ly = y - 5; ly <= y - 3; ly++)
-      for (let lx = x - 2; lx <= x + 2; lx++)
-        if (!this.world[ly * WORLD_WIDTH + lx])
-          this.world[ly * WORLD_WIDTH + lx] = 6;
+  treeQueue(gx, gy) {
+    // Delayed tree generation to avoid overwriting current chunk loop complexity
+    // Simplified: Just set if chunk exists (Host only)
+    // For this demo, we assume trees generate within the column pass or handled via post-proc.
+    // Direct approach: Set blocks in world using setBlock (handles chunk lookup)
+    setTimeout(() => {
+      for (let i = 0; i < 4; i++) this.setBlock(gx, gy - i, 4); // Wood
+      for (let ly = gy - 5; ly <= gy - 3; ly++)
+        for (let lx = gx - 2; lx <= gx + 2; lx++) {
+          if (!this.getBlock(lx, ly)) this.setBlock(lx, ly, 5); // Leaves
+        }
+    }, 10);
   }
 
+  getBlock(gx, gy) {
+    const cx = Math.floor(gx / CHUNK_SIZE);
+    const cy = Math.floor(gy / CHUNK_SIZE);
+    const chunk = this.chunks[this.getChunkKey(cx, cy)];
+    if (!chunk) return 0;
+    const lx = ((gx % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+    const ly = ((gy % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+    return chunk[ly * CHUNK_SIZE + lx];
+  }
+
+  setBlock(gx, gy, id) {
+    const cx = Math.floor(gx / CHUNK_SIZE);
+    const cy = Math.floor(gy / CHUNK_SIZE);
+    const key = this.getChunkKey(cx, cy);
+    let chunk = this.chunks[key];
+    if (!chunk) return; // Should not happen if interacting
+    const lx = ((gx % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+    const ly = ((gy % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+    chunk[ly * CHUNK_SIZE + lx] = id;
+
+    // Broadcast change if host
+    if (this.net.isHost) {
+      this.net.broadcast({ type: "BLOCK", x: gx, y: gy, id });
+    }
+  }
+
+  // --- MAIN LOOP ---
   loop() {
     if (this.net.isHost) {
+      // Generate chunks around players
+      for (let id in this.players) {
+        const p = this.players[id];
+        const cx = Math.floor(p.x / TILE_SIZE / CHUNK_SIZE);
+        const cy = Math.floor(p.y / TILE_SIZE / CHUNK_SIZE);
+        for (let dy = -1; dy <= 1; dy++)
+          for (let dx = -2; dx <= 2; dx++) {
+            this.getChunk(cx + dx, cy + dy);
+          }
+      }
       this.updatePhys();
       this.updateDrops();
       this.net.broadcast({
@@ -531,7 +479,6 @@ class Game {
       });
     }
     this.processMining();
-    this.updateParticles();
     this.render();
     requestAnimationFrame(() => this.loop());
   }
@@ -545,11 +492,11 @@ class Game {
       p.y += p.vy;
       this.collide(p, "y");
       p.vx *= 0.8;
-      if (p.y > WORLD_HEIGHT * TILE_SIZE) {
-        p.x = 50 * TILE_SIZE;
-        p.y = 10 * TILE_SIZE;
+      if (p.y > 10000) {
+        p.x = 0;
+        p.y = -200;
         p.vy = 0;
-      }
+      } // Respawn
     }
   }
 
@@ -562,49 +509,18 @@ class Game {
         by = Math.floor((d.y + 16) / TILE_SIZE);
       if (this.isSolid(bx, by)) {
         d.y = by * TILE_SIZE - 16;
-        d.vy *= -0.5; // Bounce
-        if (Math.abs(d.vy) < 1) d.vy = 0;
-      } else {
-        d.x += d.vx;
-        d.vx *= 0.95;
+        d.vy = 0;
       }
       d.life--;
-      d.bob += 0.1;
-
-      // Magnet
       for (let pid in this.players) {
         const p = this.players[pid];
-        const dist = Math.hypot(p.x - d.x, p.y - d.y);
-        if (dist < 100) {
-          d.x += (p.x - d.x) * 0.1;
-          d.y += (p.y - d.y) * 0.1;
-        }
-        if (dist < 30) {
+        if (Math.hypot(p.x - d.x, p.y - d.y) < 40) {
           this.giveItem(pid, d.itemId, 1);
           this.drops.splice(i, 1);
           break;
         }
       }
       if (d.life <= 0) this.drops.splice(i, 1);
-    }
-  }
-
-  updateParticles() {
-    for (let i = this.particles.length - 1; i >= 0; i--) {
-      this.particles[i].update();
-      if (this.particles[i].life <= 0) this.particles.splice(i, 1);
-    }
-  }
-
-  spawnParticles(x, y, color) {
-    for (let i = 0; i < 5; i++) {
-      this.particles.push(
-        new Particle(
-          x * TILE_SIZE + TILE_SIZE / 2,
-          y * TILE_SIZE + TILE_SIZE / 2,
-          color
-        )
-      );
     }
   }
 
@@ -630,14 +546,14 @@ class Game {
   }
 
   isSolid(x, y) {
-    if (x < 0 || x >= WORLD_WIDTH || y < 0 || y >= WORLD_HEIGHT) return false;
-    const b = BLOCKS[this.world[y * WORLD_WIDTH + x]];
-    return b && b.solid;
+    const id = this.getBlock(x, y);
+    return id && BLOCKS[id].solid;
   }
 
   processMining() {
     if (!this.mouse.left) {
       this.mining.active = false;
+      document.getElementById("mining-bar-container").style.display = "none";
       return;
     }
     const mx = this.mouse.x + this.cam.x,
@@ -652,17 +568,33 @@ class Game {
       this.mining.progress = 0;
     }
 
-    const bid = this.world[by * WORLD_WIDTH + bx];
-    if (!bid || BLOCKS[bid].unbreakable) return;
+    const id = this.getBlock(bx, by);
+    if (!id || BLOCKS[id].unbreakable) {
+      document.getElementById("mining-bar-container").style.display = "none";
+      return;
+    }
 
     const p = this.players[this.net.myId];
     const tool = ITEMS[p.inv[this.selSlot]?.id] || ITEMS[1];
+    const block = BLOCKS[id];
 
-    // Progress Logic
-    this.mining.progress += tool.power || 1;
+    let power = 1.0;
+    // Tool Logic
+    if (block.reqTool) {
+      if (tool.toolType === block.reqTool) power = tool.power; // Efficient
+      else power = 1.0; // Hand speed (slow but possible)
+    } else {
+      power = tool.power || 1.0; // General block
+    }
 
-    if (this.mining.progress >= BLOCKS[bid].hardness) {
-      this.spawnParticles(bx, by, BLOCKS[bid].color);
+    this.mining.progress += power;
+
+    // UI
+    const pct = Math.min(100, (this.mining.progress / block.hardness) * 100);
+    document.getElementById("mining-bar-container").style.display = "block";
+    document.getElementById("mining-bar").style.width = pct + "%";
+
+    if (this.mining.progress >= block.hardness) {
       this.net.send({ type: "MINE", x: bx, y: by });
       this.mining.progress = 0;
     }
@@ -692,7 +624,9 @@ class Game {
     };
     if (id === this.net.myId) {
       const inv = this.players[id].inv;
-      inv[0] = { id: 2, count: 1 }; // Starter Pickaxe
+      // Starter Kit
+      inv[0] = { id: 4, count: 1 }; // Axe (for testing wood)
+      inv[1] = { id: 2, count: 1 }; // Pick
       this.updateUI();
       this.cam.x = x - this.width / 2;
       this.cam.y = y - this.height / 2;
@@ -715,50 +649,51 @@ class Game {
 
   onPacket(msg, sender) {
     if (msg.type === "INIT") {
-      this.world = new Uint8Array(Object.values(msg.world));
+      for (let k in msg.chunks)
+        this.chunks[k] = new Uint8Array(Object.values(msg.chunks[k]));
       this.players = msg.players;
+    } else if (msg.type === "CHUNK_DATA") {
+      for (let k in msg.chunks)
+        this.chunks[k] = new Uint8Array(Object.values(msg.chunks[k]));
     } else if (msg.type === "SYNC") {
       this.players = msg.players;
       this.drops = msg.drops;
       this.updateUI();
     } else if (msg.type === "BLOCK") {
-      this.world[msg.y * WORLD_WIDTH + msg.x] = msg.id;
+      this.setBlock(msg.x, msg.y, msg.id);
     } else if (this.net.isHost) {
       if (msg.type === "INPUT") {
         const p = this.players[sender];
         if (p) {
           if (msg.keys.a) p.vx = -5;
           if (msg.keys.d) p.vx = 5;
-          if (msg.keys.w && p.grounded) p.vy = -12;
+          if (msg.keys.w && p.grounded) p.vy = -10;
         }
       }
       if (msg.type === "MINE") {
-        const bid = this.world[msg.y * WORLD_WIDTH + msg.x];
-        if (bid && !BLOCKS[bid].unbreakable) {
-          this.world[msg.y * WORLD_WIDTH + msg.x] = 0;
+        const id = this.getBlock(msg.x, msg.y);
+        if (id && !BLOCKS[id].unbreakable) {
+          this.setBlock(msg.x, msg.y, 0);
+          // Drop mapping
+          let did = id;
+          if (id === 1) did = 2; // Grass->Dirt
+          if (id === 3) did = 21; // Stone->Cobble
           this.drops.push(
             new Drop(
               msg.x * TILE_SIZE + TILE_SIZE / 2,
               msg.y * TILE_SIZE + TILE_SIZE / 2,
-              bid
+              did
             )
           );
-          this.net.broadcast({ type: "BLOCK", x: msg.x, y: msg.y, id: 0 });
         }
       }
       if (msg.type === "PLACE") {
         const p = this.players[sender];
         const item = p.inv[msg.slot];
         if (item.id && item.count > 0 && !this.isSolid(msg.x, msg.y)) {
-          this.world[msg.y * WORLD_WIDTH + msg.x] = item.id;
+          this.setBlock(msg.x, msg.y, item.id);
           item.count--;
           if (item.count <= 0) item.id = 0;
-          this.net.broadcast({
-            type: "BLOCK",
-            x: msg.x,
-            y: msg.y,
-            id: item.id,
-          });
         }
       }
     }
@@ -776,62 +711,52 @@ class Game {
     this.cam.x = p.x - this.width / 2;
     this.cam.y = p.y - this.height / 2;
 
-    // Sky with Gradient
     const g = this.ctx.createLinearGradient(0, 0, 0, this.height);
-    g.addColorStop(0, "#4fc3f7");
-    g.addColorStop(1, "#b3e5fc");
+    g.addColorStop(0, "#87CEEB");
+    g.addColorStop(1, "#B2EBF2");
     this.ctx.fillStyle = g;
     this.ctx.fillRect(0, 0, this.width, this.height);
 
-    const sx = Math.floor(this.cam.x / TILE_SIZE),
-      sy = Math.floor(this.cam.y / TILE_SIZE);
-    const ex = sx + Math.floor(this.width / TILE_SIZE) + 2,
-      ey = sy + Math.floor(this.height / TILE_SIZE) + 2;
+    // Render visible chunks
+    const startCX = Math.floor(this.cam.x / TILE_SIZE / CHUNK_SIZE);
+    const endCX = startCX + Math.ceil(this.width / TILE_SIZE / CHUNK_SIZE) + 1;
+    const startCY = Math.floor(this.cam.y / TILE_SIZE / CHUNK_SIZE);
+    const endCY = startCY + Math.ceil(this.height / TILE_SIZE / CHUNK_SIZE) + 1;
 
-    for (let y = sy; y < ey; y++)
-      for (let x = sx; x < ex; x++) {
-        if (x < 0 || x >= WORLD_WIDTH || y < 0 || y >= WORLD_HEIGHT) continue;
-        const id = this.world[y * WORLD_WIDTH + x];
-        if (id !== 0 && this.assets.blocks[id]) {
-          const px = Math.floor(x * TILE_SIZE - this.cam.x),
-            py = Math.floor(y * TILE_SIZE - this.cam.y);
-          this.ctx.drawImage(this.assets.blocks[id], px, py);
-          // Cracking Overlay
-          if (
-            this.mining.active &&
-            this.mining.bx === x &&
-            this.mining.by === y
-          ) {
-            const pct = this.mining.progress / BLOCKS[id].hardness;
-            this.ctx.fillStyle = `rgba(0,0,0,${pct * 0.5})`;
-            this.ctx.beginPath();
-            this.ctx.moveTo(px + TILE_SIZE / 2, py);
-            this.ctx.lineTo(px + TILE_SIZE / 2 + 10 * pct, py + TILE_SIZE);
-            this.ctx.lineTo(px + TILE_SIZE / 2 - 10 * pct, py + TILE_SIZE);
-            this.ctx.fill();
+    for (let cy = startCY; cy <= endCY; cy++) {
+      for (let cx = startCX; cx <= endCX; cx++) {
+        const chunk = this.chunks[this.getChunkKey(cx, cy)];
+        if (!chunk) continue;
+        for (let y = 0; y < CHUNK_SIZE; y++) {
+          for (let x = 0; x < CHUNK_SIZE; x++) {
+            const id = chunk[y * CHUNK_SIZE + x];
+            if (id !== 0 && this.assets.blocks[id]) {
+              const wx = (cx * CHUNK_SIZE + x) * TILE_SIZE;
+              const wy = (cy * CHUNK_SIZE + y) * TILE_SIZE;
+              this.ctx.drawImage(
+                this.assets.blocks[id],
+                Math.floor(wx - this.cam.x),
+                Math.floor(wy - this.cam.y)
+              );
+            }
           }
         }
       }
+    }
 
-    // Drops with Bobbing
+    // Mining overlay
+    if (this.mining.active) {
+      const wx = this.mining.bx * TILE_SIZE - this.cam.x;
+      const wy = this.mining.by * TILE_SIZE - this.cam.y;
+      this.ctx.fillStyle = "rgba(255,255,255,0.3)";
+      this.ctx.fillRect(wx, wy, TILE_SIZE, TILE_SIZE);
+    }
+
     this.drops.forEach((d) => {
-      const i = this.assets.blocks[d.itemId];
-      if (i) {
-        const bob = Math.sin(d.bob) * 5;
-        this.ctx.drawImage(
-          i,
-          d.x - this.cam.x - 10,
-          d.y - this.cam.y - 10 + bob,
-          20,
-          20
-        );
-      }
+      const i = this.assets.blocks[d.itemId] || this.assets.items[d.itemId];
+      if (i) this.ctx.drawImage(i, d.x - this.cam.x, d.y - this.cam.y, 20, 20);
     });
 
-    // Particles
-    this.particles.forEach((pt) => pt.render(this.ctx, this.cam.x, this.cam.y));
-
-    // Players
     for (let id in this.players) {
       const ply = this.players[id];
       const px = ply.x - this.cam.x,
@@ -839,7 +764,11 @@ class Game {
       this.ctx.fillStyle = id === this.net.myId ? "#fff" : "#ccc";
       this.ctx.fillRect(px, py, 24, 54);
     }
+
     this.sendInput();
+    document.getElementById("coord-info").innerText = `X:${Math.floor(
+      p.x / TILE_SIZE
+    )} Y:${Math.floor(p.y / TILE_SIZE)}`;
   }
 
   initInvUI() {

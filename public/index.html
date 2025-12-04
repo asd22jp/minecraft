@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FullStackCraft v8 - High-End</title>
+    <title>FullStackCraft v9 - Infinite Chunks</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <div id="ui-layer">
       <div id="login-screen">
-        <h1>FullStackCraft v8</h1>
-        <p style="color: #88ccff">Procedural Textures & Physics Drops</p>
+        <h1>FullStackCraft v9</h1>
+        <p style="color: #88ccff">Infinite World & Realistic Mining Time</p>
         <input
           type="text"
           id="room-input"
@@ -18,22 +18,24 @@
           value="world1"
         />
         <button id="start-btn">Enter World</button>
-        <p>Controls: WASD=Move, Click=Mine/Place, E=Inventory, 1-9=Select</p>
+        <p><strong>Note:</strong> Wood takes 5s to break by hand.</p>
       </div>
       <div id="game-ui" style="display: none">
         <div id="hud-top">
           <span id="fps-counter">FPS: 60</span> |
-          <span id="biome-info">Biome: Plains</span>
+          <span id="coord-info">X: 0 Y: 0</span>
         </div>
         <div id="inventory-bar"></div>
         <div id="health-container"><div id="health-bar"></div></div>
+        <div id="mining-bar-container" style="display: none">
+          <div id="mining-bar"></div>
+        </div>
         <div id="inventory-screen" style="display: none">
           <div class="panel">
-            <h2>Backpack</h2>
+            <h2>Inventory</h2>
             <div id="inv-grid"></div>
           </div>
         </div>
-        <div id="mining-overlay" style="display: none"></div>
       </div>
     </div>
     <canvas id="game-canvas"></canvas>
