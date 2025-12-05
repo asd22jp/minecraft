@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>FullStackCraft v27 - Crash Fix</title>
+    <title>P2P Voxel Game</title>
     <style>
       body {
         margin: 0;
@@ -307,9 +307,8 @@
   <body>
     <div id="ui-layer">
       <div id="login-screen">
-        <h1>FullStackCraft v27</h1>
-        <p style="color: #ffd700">CRASH FIX UPDATE</p>
-        <p>Fixed: "solid" error on tools</p>
+        <h1>FullStackCraft P2P</h1>
+        <p style="color: #ffd700">WebSocket Signaling / WebRTC Game</p>
         <input
           type="text"
           id="room-input"
@@ -319,7 +318,7 @@
         <button id="start-btn">Start Game</button>
       </div>
 
-      <div id="loading-screen">Connecting to World...</div>
+      <div id="loading-screen">Connecting via WebRTC...</div>
 
       <div id="game-ui" style="display: none">
         <div id="hud-top">
@@ -390,7 +389,6 @@
     <script src="/socket.io/socket.io.js"></script>
 
     <script>
-      // FullStackCraft v27 - Crash Fix
       const TILE_SIZE = 48;
       const CHUNK_SIZE = 16;
       const GRAVITY = 0.5;
@@ -613,16 +611,18 @@
         { in: [15, 1], out: { id: 6, count: 1 }, shapeless: true },
       ];
 
+      // --- P2P Network Logic ---
       class Network {
         constructor(game) {
           this.game = game;
-          this.socket = io();
+          this.socket = io(); // WebSocketはシグナリングのみ
           this.peers = {};
           this.channels = {};
           this.myId = null;
           this.hostId = null;
           this.isHost = false;
 
+          // 1. WebSocketイベント (シグナリングと役割分担)
           this.socket.on("connect", () => {
             this.myId = this.socket.id;
           });
@@ -630,16 +630,20 @@
             this.isHost = d.role === "HOST";
             this.hostId = this.isHost ? this.myId : d.hostId;
             if (this.isHost) {
+              // ホストなら即ゲーム開始
               this.game.start();
               document.getElementById("loading-screen").style.display = "none";
             } else {
+              // クライアントならWebRTC接続待機画面
               document.getElementById("loading-screen").style.display = "flex";
             }
           });
           this.socket.on("user-joined", (d) => {
+            // ホスト側: 新規参加者にWebRTC接続オファーを送る
             if (this.isHost) this.connectTo(d.userId, true);
           });
           this.socket.on("signal", async (d) => {
+            // P2Pシグナリング受信処理
             if (!this.peers[d.sender]) await this.connectTo(d.sender, false);
             const pc = this.peers[d.sender];
             if (d.signal.type === "offer") {
@@ -653,6 +657,7 @@
               await pc.addIceCandidate(d.signal.candidate);
           });
           this.socket.on("host-migrated", (d) => {
+            // ホスト移行処理
             this.hostId = d.newHostId;
             if (this.hostId === this.myId) {
               this.isHost = true;
@@ -661,11 +666,15 @@
             } else window.location.reload();
           });
         }
+
+        // 2. WebRTC接続確立
         async connectTo(target, initiator) {
           const pc = new RTCPeerConnection({
             iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
           });
           this.peers[target] = pc;
+
+          // ICE Candidate (経路情報) をWebSocket経由で交換
           pc.onicecandidate = (e) => {
             if (e.candidate)
               this.socket.emit("signal", {
@@ -673,28 +682,38 @@
                 signal: { candidate: e.candidate },
               });
           };
+
           if (initiator) {
+            // データチャンネル作成 (ゲームデータのパイプライン)
             const dc = pc.createDataChannel("game");
             this.setupDC(dc, target);
             const off = await pc.createOffer();
             await pc.setLocalDescription(off);
+            // オファーをWebSocket経由で送信
             this.socket.emit("signal", { target, signal: off });
           } else pc.ondatachannel = (e) => this.setupDC(e.channel, target);
         }
+
+        // 3. DataChannelセットアップ (ゲームデータ送受信)
         setupDC(dc, target) {
           this.channels[target] = dc;
           dc.onopen = () => {
+            // 接続完了。クライアントなら同期リクエストを送る
             if (!this.isHost) {
               this.sendTo(target, { type: "REQUEST_SYNC" });
             }
           };
+          // P2P経由でメッセージ受信
           dc.onmessage = (e) => this.game.onPacket(JSON.parse(e.data), target);
         }
 
+        // 4. データ送信 (P2Pのみ使用)
         send(msg) {
           if (this.isHost) {
+            // ホストは自分自身へ処理を回す
             this.game.onPacket(msg, this.myId);
           } else if (this.hostId && this.channels[this.hostId]) {
+            // クライアントはホストへ送信
             this.channels[this.hostId].send(JSON.stringify(msg));
           }
         }
@@ -711,6 +730,7 @@
         }
       }
 
+      // --- Game Logic Classes ---
       class Mob {
         constructor(id, type, x, y) {
           this.id = id;
@@ -822,6 +842,7 @@
           document.getElementById("start-btn").onclick = () => {
             document.getElementById("login-screen").style.display = "none";
             document.getElementById("game-ui").style.display = "block";
+            // WebSocketで部屋に参加 (シグナリング開始)
             this.net.socket.emit(
               "join-room",
               document.getElementById("room-input").value
@@ -962,7 +983,6 @@
               "none";
             return;
           }
-          // ★安全対策：BLOCKSにないIDの場合は中断
           if (!BLOCKS[id] || BLOCKS[id].unbreakable) return;
 
           const p = this.players[this.net.myId];
@@ -1057,7 +1077,6 @@
             this.net.send({ type: "EAT", slot: this.selSlot });
             return;
           }
-          // ★バグ修正：ブロック定義に存在するIDのみ設置許可（道具を置かせない）
           if (BLOCKS[item.id] && !this.isSolid(bx, by)) {
             if (
               !(
@@ -1378,7 +1397,6 @@
           if (axis === "y") e.grounded = false;
         }
 
-        // ★修正ポイント: 不正なIDや未定義のブロックでのクラッシュを防ぐ
         isSolid(x, y) {
           const id = this.getBlock(x, y);
           return id && BLOCKS[id] && BLOCKS[id].solid;
