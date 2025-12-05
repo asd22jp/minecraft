@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>Craft beta (日本語版)</title>
+    <title>Craft BETA</title>
     <style>
       body {
         margin: 0;
@@ -27,13 +27,15 @@
         pointer-events: none;
         z-index: 10;
       }
+
+      /* ログイン画面 */
       #login-screen {
         position: absolute;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
         background: linear-gradient(135deg, #222, #444);
-        padding: 40px;
+        padding: 30px;
         border-radius: 12px;
         text-align: center;
         color: white;
@@ -41,27 +43,26 @@
         box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
         border: 2px solid #ffd700;
         z-index: 200;
+        width: 85%;
+        max-width: 320px;
       }
       input,
       button {
         padding: 12px;
-        margin: 10px;
+        margin: 8px auto;
         border-radius: 6px;
         border: none;
         font-size: 16px;
-        width: 200px;
+        width: 100%;
         display: block;
-        margin: 10px auto;
-        font-family: inherit;
+        box-sizing: border-box;
       }
       button {
         background: #ffca28;
         color: #000;
         cursor: pointer;
         font-weight: bold;
-      }
-      button:hover {
-        background: #ffb300;
+        margin-top: 15px;
       }
       .color-picker {
         display: flex;
@@ -69,7 +70,7 @@
         justify-content: center;
         gap: 10px;
         color: white;
-        margin-bottom: 15px;
+        margin: 10px 0;
       }
 
       /* HUD */
@@ -79,34 +80,27 @@
         left: 10px;
         color: white;
         text-shadow: 2px 2px 0 #000;
-        font-size: 16px;
+        font-size: 14px;
+        pointer-events: none;
       }
+
+      /* インベントリバー (画面上部に移動: 指で隠れないように) */
       #inventory-bar {
         position: absolute;
-        bottom: 20px;
+        top: 10px;
         left: 50%;
         transform: translateX(-50%);
-        background: rgba(0, 0, 0, 0.7);
-        padding: 6px;
+        background: rgba(0, 0, 0, 0.5);
+        padding: 4px;
         border-radius: 8px;
         display: flex;
-        gap: 6px;
+        gap: 4px;
         pointer-events: auto;
         z-index: 50;
       }
-      @media (max-width: 768px) {
-        #inventory-bar {
-          bottom: 120px;
-          transform: translateX(-50%) scale(0.9);
-        }
-        #status-container {
-          bottom: 180px !important;
-        }
-      }
-
       .slot {
-        width: 48px;
-        height: 48px;
+        width: 40px;
+        height: 40px;
         background: rgba(255, 255, 255, 0.1);
         border: 2px solid #555;
         position: relative;
@@ -115,38 +109,37 @@
         align-items: center;
         justify-content: center;
       }
-      .slot:hover {
-        background: rgba(255, 255, 255, 0.2);
-      }
       .slot.active {
         border-color: #ffd700;
+        background: rgba(255, 255, 255, 0.2);
         transform: scale(1.1);
       }
       .count {
         position: absolute;
-        bottom: 2px;
+        bottom: 1px;
         right: 2px;
         color: white;
-        font-size: 12px;
+        font-size: 10px;
         font-weight: bold;
         text-shadow: 1px 1px 0 #000;
       }
 
+      /* ステータスバー */
       #status-container {
         position: absolute;
-        bottom: 90px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 300px;
+        top: 60px;
+        left: 10px;
+        width: 150px;
         display: flex;
         flex-direction: column;
-        gap: 5px;
+        gap: 4px;
+        opacity: 0.8;
       }
       .bar-bg {
         width: 100%;
-        height: 16px;
+        height: 12px;
         background: #222;
-        border: 2px solid #fff;
+        border: 1px solid #fff;
         position: relative;
       }
       #health-bar {
@@ -161,16 +154,6 @@
         background: #d84315;
         transition: width 0.2s;
       }
-      .bar-label {
-        position: absolute;
-        top: 0;
-        left: 50%;
-        transform: translateX(-50%);
-        font-size: 10px;
-        color: white;
-        text-shadow: 1px 1px 0 #000;
-        line-height: 16px;
-      }
 
       /* 採掘バー */
       #mining-bar-container {
@@ -178,32 +161,131 @@
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        width: 80px;
-        height: 10px;
+        width: 60px;
+        height: 8px;
         background: rgba(0, 0, 0, 0.6);
-        border: 2px solid white;
+        border: 1px solid white;
         display: none;
         z-index: 100;
-        pointer-events: none;
       }
       #mining-bar {
         width: 0%;
         height: 100%;
         background: #00e676;
-        transition: width 0.05s linear;
       }
 
+      /* スマホ用コントローラー */
+      #mobile-controls {
+        position: absolute;
+        bottom: 20px;
+        left: 0;
+        width: 100%;
+        height: 160px;
+        pointer-events: none;
+        z-index: 100;
+        display: flex;
+        justify-content: space-between;
+        padding: 0 20px;
+        box-sizing: border-box;
+      }
+      /* PCでは非表示にする場合 */
+      @media (min-width: 1025px) {
+        #mobile-controls {
+          display: none;
+        }
+      }
+
+      .dpad-area {
+        position: relative;
+        width: 140px;
+        height: 140px;
+        pointer-events: auto;
+      }
+      .action-area {
+        position: relative;
+        width: 140px;
+        height: 140px;
+        pointer-events: auto;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        justify-content: flex-end;
+        gap: 15px;
+      }
+
+      .ctrl-btn {
+        background: rgba(255, 255, 255, 0.2);
+        border: 2px solid rgba(255, 255, 255, 0.5);
+        border-radius: 50%;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        backdrop-filter: blur(4px);
+        user-select: none;
+      }
+      .ctrl-btn:active,
+      .ctrl-btn.pressed {
+        background: rgba(255, 215, 0, 0.4);
+        border-color: gold;
+      }
+
+      /* 十字キー配置 */
+      #btn-left {
+        position: absolute;
+        top: 50px;
+        left: 0;
+        width: 50px;
+        height: 50px;
+      }
+      #btn-right {
+        position: absolute;
+        top: 50px;
+        left: 70px;
+        width: 50px;
+        height: 50px;
+      }
+      #btn-jump {
+        position: absolute;
+        top: 0;
+        left: 35px;
+        width: 50px;
+        height: 50px;
+      }
+
+      /* アクションボタン */
+      #btn-action {
+        width: 70px;
+        height: 70px;
+        background: rgba(255, 0, 0, 0.2);
+        font-size: 24px;
+      }
+      #btn-mode {
+        width: 50px;
+        height: 50px;
+        font-size: 20px;
+        background: rgba(0, 0, 255, 0.2);
+      }
+      #btn-inv-toggle {
+        width: 50px;
+        height: 50px;
+        font-size: 14px;
+      }
+
+      /* インベントリ画面 */
       #inventory-screen {
         position: absolute;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        background: rgba(30, 30, 30, 0.98);
-        padding: 30px;
+        background: rgba(30, 30, 30, 0.95);
+        padding: 20px;
         border-radius: 12px;
         border: 2px solid #fff;
         display: none;
-        gap: 40px;
+        flex-direction: column;
+        gap: 20px;
         pointer-events: auto;
         color: white;
         z-index: 150;
@@ -211,49 +293,16 @@
         max-height: 80vh;
         overflow-y: auto;
       }
-      .panel {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-      }
-      h2 {
-        margin: 0 0 10px 0;
-        border-bottom: 1px solid #555;
-        width: 100%;
-        text-align: center;
-        padding-bottom: 5px;
-      }
       #inv-grid,
       #craft-grid {
         display: grid;
+        grid-template-columns: repeat(5, 48px); /* スマホ向けに5列 */
         gap: 6px;
-      }
-      #inv-grid {
-        grid-template-columns: repeat(9, 48px);
-      }
-      @media (max-width: 600px) {
-        #inv-grid {
-          grid-template-columns: repeat(5, 48px);
-        }
-        #inventory-screen {
-          flex-direction: column;
-          gap: 20px;
-        }
       }
       #craft-grid {
         grid-template-columns: repeat(3, 48px);
-        margin-bottom: 10px;
-      }
-      #craft-result-slot {
-        border-color: gold;
       }
 
-      canvas {
-        display: block;
-        image-rendering: pixelated;
-        width: 100%;
-        height: 100%;
-      }
       #death-screen,
       #loading-screen {
         position: absolute;
@@ -275,63 +324,19 @@
         z-index: 190;
         font-family: sans-serif;
       }
-
-      /* Mobile Controls */
-      #mobile-controls {
-        display: none;
-        pointer-events: none;
-        position: absolute;
-        bottom: 10px;
-        width: 100%;
-        height: 140px;
-        z-index: 90;
-        justify-content: space-between;
-        padding: 0 20px;
-        box-sizing: border-box;
-      }
-      @media (max-width: 1024px) {
-        #mobile-controls {
-          display: flex;
-        }
-      }
-      .control-group {
-        display: flex;
-        gap: 15px;
-        align-items: flex-end;
-        pointer-events: none;
-      }
-      .m-btn {
-        width: 60px;
-        height: 60px;
-        background: rgba(255, 255, 255, 0.15);
-        border: 2px solid rgba(255, 255, 255, 0.8);
-        border-radius: 50%;
-        color: white;
-        font-size: 24px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        user-select: none;
-        pointer-events: auto;
-        backdrop-filter: blur(2px);
-      }
-      .m-btn:active {
-        background: rgba(255, 215, 0, 0.5);
-        transform: scale(0.95);
-      }
     </style>
   </head>
   <body>
     <div id="ui-layer">
+      <!-- ログイン画面 -->
       <div id="login-screen">
-        <h1>beta</h1>
-        <p style="color: #ffd700">マルチプレイ ボクセルゲーム</p>
+        <h3>Craft BETA</h3>
 
         <input
           type="text"
           id="nick-input"
           placeholder="ニックネーム"
-          value="プレイヤー"
+          value="Player"
           maxlength="10"
         />
         <input
@@ -340,85 +345,88 @@
           placeholder="ワールド名"
           value="world1"
         />
+
         <div class="color-picker">
-          <label>スキンの色: </label>
+          <label>スキン: </label>
           <input
             type="color"
             id="color-input"
             value="#29b6f6"
-            style="width: 50px; padding: 2px; border: none; cursor: pointer"
+            style="width: 50px; border: none"
           />
         </div>
 
         <button id="start-btn">ゲーム開始</button>
       </div>
 
-      <div id="loading-screen">接続待機中...</div>
+      <div id="loading-screen">接続中...</div>
 
+      <!-- ゲームUI -->
       <div id="game-ui" style="display: none">
         <div id="hud-top">
-          <span id="coord-info">X:0 Y:0</span> |
-          <span id="time-info">時間: 昼</span>
+          <span id="coord-info">0, 0</span> | <span id="time-info">昼</span>
         </div>
+
         <div id="inventory-bar"></div>
 
         <div id="status-container">
-          <div class="bar-bg">
-            <div id="health-bar"></div>
-            <span class="bar-label">HP</span>
-          </div>
-          <div class="bar-bg">
-            <div id="food-bar"></div>
-            <span class="bar-label">満腹度</span>
-          </div>
+          <div class="bar-bg"><div id="health-bar"></div></div>
+          <div class="bar-bg"><div id="food-bar"></div></div>
         </div>
 
         <div id="mining-bar-container">
           <div id="mining-bar"></div>
         </div>
 
+        <!-- モバイルコントローラー -->
         <div id="mobile-controls">
-          <div class="control-group">
-            <div class="m-btn" id="btn-left">◀</div>
-            <div class="m-btn" id="btn-right">▶</div>
+          <div class="dpad-area">
+            <div class="ctrl-btn" id="btn-jump">▲</div>
+            <div class="ctrl-btn" id="btn-left">◀</div>
+            <div class="ctrl-btn" id="btn-right">▶</div>
           </div>
-          <div class="control-group">
-            <div
-              class="m-btn"
-              id="btn-inv"
-              style="
-                border-radius: 8px;
-                font-size: 14px;
-                background: rgba(0, 0, 255, 0.3);
-              "
-            >
-              鞄
-            </div>
-            <div class="m-btn" id="btn-jump">▲</div>
+          <div class="action-area">
+            <div class="ctrl-btn" id="btn-inv-toggle">鞄</div>
+            <!-- モード切替: 破壊(Pickaxe) / 設置(Brick) -->
+            <div class="ctrl-btn" id="btn-mode">⛏</div>
+            <!-- メインアクション: 攻撃 or 設置 -->
+            <div class="ctrl-btn" id="btn-action">A</div>
           </div>
         </div>
 
+        <!-- インベントリ画面 -->
         <div id="inventory-screen">
-          <div class="panel">
-            <h2>持ち物</h2>
-            <div id="inv-grid"></div>
-          </div>
-          <div class="panel">
-            <h2>クラフト</h2>
+          <div style="text-align: center">持ち物</div>
+          <div id="inv-grid"></div>
+
+          <div style="text-align: center; margin-top: 10px">クラフト</div>
+          <div
+            style="display: flex; align-items: center; flex-direction: column"
+          >
             <div id="craft-grid"></div>
-            <div style="font-size: 24px; margin: 5px">➡</div>
-            <div id="craft-result-slot" class="slot"></div>
+            <div style="font-size: 24px; margin: 5px">⬇</div>
+            <div
+              id="craft-result-slot"
+              class="slot"
+              style="border-color: gold"
+            ></div>
           </div>
-          <button id="close-inv-btn" style="background: #d32f2f; color: white">
+
+          <button
+            id="close-inv-btn"
+            style="background: #d32f2f; margin-top: 20px"
+          >
             閉じる
           </button>
         </div>
       </div>
+
       <div id="death-screen">
         <div>死亡しました</div>
         <button onclick="window.location.reload()">リスポーン</button>
       </div>
     </div>
+
     <canvas id="game-canvas"></canvas>
 
     <script src="/socket.io/socket.io.js"></script>
@@ -428,16 +436,9 @@
       const CHUNK_SIZE = 16;
       const GRAVITY = 0.5;
 
-      // アイテム・ブロック名を日本語化
       const BLOCKS = {
         0: { name: "空気", solid: false },
-        1: {
-          name: "草ブロック",
-          color: "#5b8a36",
-          solid: true,
-          hardness: 30,
-          drop: 2,
-        },
+        1: { name: "草", color: "#5b8a36", solid: true, hardness: 30, drop: 2 },
         2: { name: "土", color: "#704828", solid: true, hardness: 30, drop: 2 },
         3: {
           name: "石",
@@ -492,7 +493,7 @@
           drop: 0,
         },
         11: {
-          name: "石炭鉱石",
+          name: "石炭",
           color: "#222",
           solid: true,
           hardness: 100,
@@ -565,7 +566,7 @@
 
       const ITEMS = {
         0: { name: "空気" },
-        1: { name: "素手", power: 1.0 },
+        1: { name: "手", power: 1.0 },
         100: {
           name: "木のツルハシ",
           power: 3.0,
@@ -603,9 +604,9 @@
         },
         200: { name: "棒", type: "item", iconColor: "#8d6e63" },
         201: { name: "石炭", type: "item", iconColor: "#333" },
-        202: { name: "鉄インゴット", type: "item", iconColor: "#ccc" },
-        203: { name: "金インゴット", type: "item", iconColor: "#ff0" },
-        204: { name: "ダイヤモンド", type: "item", iconColor: "#0ff" },
+        202: { name: "鉄", type: "item", iconColor: "#ccc" },
+        203: { name: "金", type: "item", iconColor: "#ff0" },
+        204: { name: "ダイヤ", type: "item", iconColor: "#0ff" },
         300: { name: "リンゴ", type: "food", food: 4, iconColor: "#f44336" },
         301: { name: "パン", type: "food", food: 6, iconColor: "#d7ccc8" },
         302: { name: "ステーキ", type: "food", food: 10, iconColor: "#795548" },
@@ -635,7 +636,7 @@
         { in: [15, 1], out: { id: 6, count: 1 }, shapeless: true },
       ];
 
-      // --- Network Logic ---
+      // Network Class (P2P Logic)
       class Network {
         constructor(game) {
           this.game = game;
@@ -649,38 +650,24 @@
 
           this.socket.on("connect", () => {
             this.myId = this.socket.id;
-            console.log("Socket connected:", this.myId);
           });
-
           this.socket.on("role-assigned", (d) => {
-            console.log("Role assigned:", d.role);
             this.isHost = d.role === "HOST";
             this.hostId = this.isHost ? this.myId : d.hostId;
-
             this.game.start();
-
             if (this.isHost) {
               document.getElementById("loading-screen").style.display = "none";
             } else {
-              document.getElementById("loading-screen").style.display = "flex";
               document.getElementById("loading-screen").innerText =
-                "ホストの参加を待機中...";
+                "ホスト待機中...";
             }
           });
-
           this.socket.on("user-joined", (d) => {
-            if (this.isHost) {
-              console.log("User joined, connecting:", d.userId);
-              this.connectTo(d.userId, true);
-            }
+            if (this.isHost) this.connectTo(d.userId, true);
           });
-
           this.socket.on("signal", async (d) => {
-            if (!this.peers[d.sender]) {
-              await this.connectTo(d.sender, false);
-            }
+            if (!this.peers[d.sender]) await this.connectTo(d.sender, false);
             const pc = this.peers[d.sender];
-
             try {
               if (d.signal.type === "offer") {
                 await pc.setRemoteDescription(
@@ -696,21 +683,20 @@
                 );
                 this.processQueue(d.sender);
               } else if (d.signal.candidate) {
-                if (pc.remoteDescription && pc.remoteDescription.type) {
+                if (pc.remoteDescription)
                   await pc.addIceCandidate(
                     new RTCIceCandidate(d.signal.candidate)
                   );
-                } else {
+                else {
                   if (!this.candidatesQueue[d.sender])
                     this.candidatesQueue[d.sender] = [];
                   this.candidatesQueue[d.sender].push(d.signal.candidate);
                 }
               }
-            } catch (err) {
-              console.error("Signal error:", err);
+            } catch (e) {
+              console.error(e);
             }
           });
-
           this.socket.on("host-migrated", (d) => {
             this.hostId = d.newHostId;
             if (this.hostId === this.myId) {
@@ -719,26 +705,22 @@
             } else window.location.reload();
           });
         }
-
         async processQueue(id) {
           const pc = this.peers[id];
           const queue = this.candidatesQueue[id];
           if (queue) {
             while (queue.length > 0) {
-              const cand = queue.shift();
               try {
-                await pc.addIceCandidate(new RTCIceCandidate(cand));
+                await pc.addIceCandidate(new RTCIceCandidate(queue.shift()));
               } catch (e) {}
             }
           }
         }
-
         async connectTo(target, initiator) {
           const pc = new RTCPeerConnection({
             iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
           });
           this.peers[target] = pc;
-
           pc.onicecandidate = (e) => {
             if (e.candidate)
               this.socket.emit("signal", {
@@ -746,7 +728,6 @@
                 signal: { candidate: e.candidate },
               });
           };
-
           if (initiator) {
             const dc = pc.createDataChannel("game");
             this.setupDC(dc, target);
@@ -757,47 +738,37 @@
             pc.ondatachannel = (e) => this.setupDC(e.channel, target);
           }
         }
-
         setupDC(dc, target) {
           this.channels[target] = dc;
           dc.onopen = () => {
-            console.log("DataChannel OPEN with", target);
-
             const myNick =
-              document.getElementById("nick-input").value || "プレイヤー";
+              document.getElementById("nick-input").value || "Player";
             const myColor =
               document.getElementById("color-input").value || "#29b6f6";
-
             this.sendTo(target, {
               type: "INIT_PLAYER",
               nick: myNick,
               color: myColor,
             });
-
             if (!this.isHost) {
               document.getElementById("loading-screen").innerText =
-                "ワールドデータを同期中...";
+                "ワールド同期中...";
               this.sendTo(target, { type: "REQUEST_SYNC" });
             }
           };
           dc.onmessage = (e) => {
             if (
               document.getElementById("loading-screen").style.display !== "none"
-            ) {
+            )
               document.getElementById("loading-screen").style.display = "none";
-            }
             this.game.onPacket(JSON.parse(e.data), target);
           };
         }
-
         send(msg) {
-          if (this.isHost) {
-            this.game.onPacket(msg, this.myId);
-          } else if (this.hostId && this.channels[this.hostId]) {
+          if (this.isHost) this.game.onPacket(msg, this.myId);
+          else if (this.hostId && this.channels[this.hostId])
             this.channels[this.hostId].send(JSON.stringify(msg));
-          }
         }
-
         broadcast(msg) {
           const s = JSON.stringify(msg);
           for (let id in this.channels)
@@ -819,8 +790,6 @@
           this.vx = 0;
           this.vy = 0;
           this.hp = type === "zombie" ? 20 : 10;
-          this.w = 32;
-          this.h = 48;
         }
       }
 
@@ -840,21 +809,22 @@
           this.mouse = { x: 0, y: 0 };
           this.cam = { x: 0, y: 0 };
           this.selSlot = 0;
+
           this.mining = { active: false, bx: 0, by: 0, progress: 0 };
 
-          this.interact = { startT: 0, active: false };
-          this.longPressThreshold = 200;
+          // モバイル用設定: isPlaceMode trueなら設置、falseなら破壊/攻撃
+          this.isPlaceMode = false;
 
           this.craftGrid = Array(9).fill({ id: 0, count: 0 });
           this.craftResult = { id: 0, count: 0 };
           this.selectedInvSlot = -1;
-
           this.time = 0;
-          this.assets = { blocks: {}, items: {}, mobs: {} };
+          this.assets = { blocks: {}, items: {} };
           this.genAssets();
 
           window.addEventListener("resize", () => this.fitScreen());
 
+          // PC用キーボード操作
           window.addEventListener("keydown", (e) => {
             this.keys[e.key.toLowerCase()] = true;
             if (e.key >= "1" && e.key <= "9") {
@@ -862,54 +832,39 @@
               this.updateUI();
             }
             if (e.key === "e") this.toggleInv();
+            // Qキーでモード切替（PCでのテスト用）
+            if (e.key === "q") this.toggleMode();
           });
           window.addEventListener(
             "keyup",
             (e) => (this.keys[e.key.toLowerCase()] = false)
           );
-          window.addEventListener("mousemove", (e) => {
-            if (e.target.closest("#mobile-controls")) return;
+
+          // マウス操作 (PC)
+          this.canvas.addEventListener("mousemove", (e) => {
             this.mouse.x = e.clientX;
             this.mouse.y = e.clientY;
           });
-          this.canvas.addEventListener("mousedown", (e) =>
-            this.handleInputStart(e.clientX, e.clientY, e.button === 2)
-          );
-          this.canvas.addEventListener("mouseup", (e) =>
-            this.handleInputEnd(e.button === 2)
-          );
-
-          // Touch events
-          const touchStart = (e) => {
-            if (e.touches.length > 0)
-              this.handleInputStart(
-                e.touches[0].clientX,
-                e.touches[0].clientY,
-                false
-              );
-          };
-          const touchEnd = (e) => this.handleInputEnd(false);
-          this.canvas.addEventListener("touchstart", touchStart, {
-            passive: false,
+          this.canvas.addEventListener("mousedown", (e) => {
+            // UIが開いている時は無視
+            if (
+              document.getElementById("inventory-screen").style.display !==
+              "none"
+            )
+              return;
+            // 左クリック: 破壊/攻撃, 右クリック: 設置
+            if (e.button === 2) this.handleAction(true); // Place
+            else {
+              this.mining.active = true;
+              this.handleAction(false); // Attack/Mine start
+            }
           });
-          this.canvas.addEventListener("touchend", touchEnd, {
-            passive: false,
+          this.canvas.addEventListener("mouseup", () => {
+            this.mining.active = false;
+            this.mining.progress = 0;
           });
-          this.canvas.addEventListener("touchcancel", touchEnd, {
-            passive: false,
-          });
-          this.canvas.addEventListener(
-            "touchmove",
-            (e) => {
-              e.preventDefault();
-              if (e.touches.length > 0) {
-                this.mouse.x = e.touches[0].clientX;
-                this.mouse.y = e.touches[0].clientY;
-              }
-            },
-            { passive: false }
-          );
           window.addEventListener("contextmenu", (e) => e.preventDefault());
+
           this.setupMobileControls();
 
           document.getElementById("start-btn").onclick = () => {
@@ -925,77 +880,119 @@
           this.initInvUI();
         }
 
-        handleInputStart(x, y, isRightClick) {
-          if (
-            document.getElementById("inventory-screen").style.display !== "none"
-          )
-            return;
-          this.mouse.x = x;
-          this.mouse.y = y;
-          this.interact.startT = Date.now();
-          this.interact.active = true;
-          this.interact.isRight = isRightClick;
+        // モバイルコントローラー設定
+        setupMobileControls() {
+          const bind = (id, key) => {
+            const el = document.getElementById(id);
+            el.addEventListener("touchstart", (e) => {
+              e.preventDefault();
+              this.keys[key] = true;
+              el.classList.add("pressed");
+            });
+            el.addEventListener("touchend", (e) => {
+              e.preventDefault();
+              this.keys[key] = false;
+              el.classList.remove("pressed");
+            });
+          };
+          bind("btn-left", "a");
+          bind("btn-right", "d");
+          bind("btn-jump", "w");
+
+          // インベントリトグル
+          document
+            .getElementById("btn-inv-toggle")
+            .addEventListener("touchstart", (e) => {
+              e.preventDefault();
+              this.toggleInv();
+            });
+
+          // モード切替
+          document
+            .getElementById("btn-mode")
+            .addEventListener("touchstart", (e) => {
+              e.preventDefault();
+              this.toggleMode();
+            });
+
+          // アクションボタン (Aボタン)
+          const btnAction = document.getElementById("btn-action");
+          btnAction.addEventListener("touchstart", (e) => {
+            e.preventDefault();
+            btnAction.classList.add("pressed");
+
+            // モードに応じたアクション
+            if (this.isPlaceMode) {
+              this.handleAction(true); // 設置
+            } else {
+              this.mining.active = true; // 採掘開始
+              this.handleAction(false); // 攻撃
+            }
+          });
+          btnAction.addEventListener("touchend", (e) => {
+            e.preventDefault();
+            btnAction.classList.remove("pressed");
+            this.mining.active = false;
+            this.mining.progress = 0;
+          });
         }
 
-        handleInputEnd(isRightClick) {
-          if (!this.interact.active) return;
-          this.interact.active = false;
-          this.mining.active = false;
-          this.mining.progress = 0;
-          const duration = Date.now() - this.interact.startT;
-          if (
-            duration < this.longPressThreshold ||
-            isRightClick ||
-            this.interact.isRight
-          ) {
-            this.tryUseItem();
+        toggleMode() {
+          this.isPlaceMode = !this.isPlaceMode;
+          const btn = document.getElementById("btn-mode");
+          const btnA = document.getElementById("btn-action");
+          if (this.isPlaceMode) {
+            btn.innerText = "🧱";
+            btnA.style.background = "rgba(0,0,255,0.3)";
+          } else {
+            btn.innerText = "⛏";
+            btnA.style.background = "rgba(255,0,0,0.3)";
           }
         }
 
-        setupMobileControls() {
-          const bindBtn = (elem, key) => {
-            elem.addEventListener("touchstart", (e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              this.keys[key] = true;
-            });
-            elem.addEventListener("touchend", (e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              this.keys[key] = false;
-            });
-            elem.addEventListener("mousedown", (e) => {
-              e.stopPropagation();
-              this.keys[key] = true;
-            });
-            elem.addEventListener("mouseup", (e) => {
-              e.stopPropagation();
-              this.keys[key] = false;
-            });
-          };
-          bindBtn(document.getElementById("btn-left"), "a");
-          bindBtn(document.getElementById("btn-right"), "d");
-          bindBtn(document.getElementById("btn-jump"), "w");
-          const toggle = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            this.toggleInv();
-          };
-          document
-            .getElementById("btn-inv")
-            .addEventListener("touchstart", toggle);
-          document
-            .getElementById("btn-inv")
-            .addEventListener("mousedown", toggle);
+        // アクション統合処理 (PC/Mobile共通)
+        handleAction(isPlace) {
+          // プレイヤーの中心座標などを基準にする（簡易実装として画面中央またはマウス位置）
+          // モバイルの場合は「プレイヤーの前方」をターゲットにしたいが、
+          // 既存コードに合わせてマウス位置(または画面中央)を使う
+          // ここではマウス位置をそのまま使う（タッチ操作でmouse.x/yが更新される前提はないので、
+          // プレイヤーの向いている方向の1ブロック先をターゲットにするロジックを追加）
+
+          let tx, ty;
+          const p = this.players[this.net.myId];
+          if (!p) return;
+
+          // モバイルまたはキー操作メインの場合、マウス座標ではなくプレイヤーの近くをターゲットにする
+          // 簡易的に「マウスカーソル位置」を使うが、スマホではタップ位置などが取れていないため
+          // 「プレイヤーの正面」をターゲットにする
+          const reach = 60; // 届く距離
+          // 最後に移動した方向(vx)で向き判定
+          const facing = p.vx >= 0 ? 1 : -1;
+
+          // マウス座標が有効(PC)ならそれを使う、そうでなければプレイヤー正面
+          // ここではシンプルに「常にプレイヤーの正面少し先」をターゲットとする（スマホ操作感向上）
+          tx = p.x + facing * 32;
+          ty = p.y;
+
+          // マウスカーソルがある場合はそちら優先（PC用）
+          // ただしタッチイベントでmouseを更新していないので、PC以外は上記ロジック
+          // 今回のコードでは mousemove はPCのみ。
+
+          // 実際の処理
+          if (isPlace) {
+            this.tryUseItemAt(tx, ty);
+          } else {
+            this.tryAttackOrMineAt(tx, ty);
+          }
         }
 
         fitScreen() {
           this.width = this.canvas.width = window.innerWidth;
           this.height = this.canvas.height = window.innerHeight;
         }
+
         start() {
-          const nick =
-            document.getElementById("nick-input").value || "プレイヤー";
+          const nick = document.getElementById("nick-input").value || "Player";
           const color =
             document.getElementById("color-input").value || "#29b6f6";
           this.spawnPlayer(this.net.myId, 0, -200, nick, color);
@@ -1003,17 +1000,23 @@
         }
 
         loop() {
-          if (this.interact.active) {
-            const duration = Date.now() - this.interact.startT;
-            if (duration > this.longPressThreshold) this.tryAttackOrMine();
+          const p = this.players[this.net.myId];
+
+          // 採掘継続処理 (ボタン押しっぱなし)
+          if (this.mining.active && p) {
+            // プレイヤー正面をターゲット
+            const facing = this.keys["d"] || p.vx > 0 ? 1 : -1;
+            const tx = p.x + facing * 32;
+            const ty = p.y;
+            this.tryAttackOrMineAt(tx, ty);
           }
 
           if (this.net.isHost) {
             this.time++;
             for (let id in this.players) {
-              const p = this.players[id];
-              const cx = Math.floor(p.x / TILE_SIZE / CHUNK_SIZE);
-              const cy = Math.floor(p.y / TILE_SIZE / CHUNK_SIZE);
+              const pl = this.players[id];
+              const cx = Math.floor(pl.x / TILE_SIZE / CHUNK_SIZE);
+              const cy = Math.floor(pl.y / TILE_SIZE / CHUNK_SIZE);
               for (let dy = -1; dy <= 1; dy++)
                 for (let dx = -2; dx <= 2; dx++)
                   this.getChunk(cx + dx, cy + dy);
@@ -1029,61 +1032,13 @@
               time: this.time,
             });
           }
-
           this.render();
           requestAnimationFrame(() => this.loop());
         }
 
-        processMining() {
-          const bx = this.mining.bx,
-            by = this.mining.by;
-          const id = this.getBlock(bx, by);
-          if (!id || !BLOCKS[id] || BLOCKS[id].unbreakable) {
-            this.mining.active = false;
-            document.getElementById("mining-bar-container").style.display =
-              "none";
-            return;
-          }
-          const p = this.players[this.net.myId];
-          const tool = ITEMS[p.inv[this.selSlot]?.id] || ITEMS[1];
-          const block = BLOCKS[id];
-          let power = tool.power || 1.0;
-          if (block.reqTool && tool.toolType !== block.reqTool) power = 0.5;
-
-          this.mining.progress += power;
-          const pct = Math.min(
-            100,
-            (this.mining.progress / block.hardness) * 100
-          );
-          document.getElementById("mining-bar-container").style.display =
-            "block";
-          document.getElementById("mining-bar").style.width = pct + "%";
-
-          if (this.mining.progress >= block.hardness) {
-            if (!this.net.isHost) {
-              this.net.send({ type: "BREAK", x: bx, y: by });
-            }
-            this.setBlock(bx, by, 0);
-            if (block.explode) this.net.send({ type: "EXPLODE", x: bx, y: by });
-            let did = BLOCKS[id].drop || id;
-            if (did) {
-              this.net.send({
-                type: "DROP",
-                x: bx * TILE_SIZE + 24,
-                y: by * TILE_SIZE + 24,
-                id: did,
-              });
-            }
-            this.mining.progress = 0;
-            this.mining.active = false;
-            document.getElementById("mining-bar-container").style.display =
-              "none";
-          }
-        }
-
-        tryAttackOrMine() {
-          const mx = this.mouse.x + this.cam.x,
-            my = this.mouse.y + this.cam.y;
+        // 座標指定で採掘/攻撃
+        tryAttackOrMineAt(mx, my) {
+          // Mob/Player攻撃判定
           const targets = [];
           for (let id in this.mobs)
             targets.push({ type: "mob", obj: this.mobs[id], id });
@@ -1107,31 +1062,57 @@
               return;
             }
           }
+
+          // ブロック採掘
+          // ターゲット座標をPCのマウス座標で上書き(PC操作の場合)
+          // スマホの場合は mx, my はプレイヤー周辺
+          // ここでは「マウスが動いていればマウス優先」のような処理は省略し、
+          // 引数の座標(mx, my)を使う
+
+          // PC操作（マウス位置を使う）場合、tryAttackOrMineAtはloopから呼ばれる際に工夫が必要だが
+          // 今回はモバイル優先のため、handleActionで計算した座標を使う
+
+          // 補正: PCの場合は this.mouse を使う
+          // (簡易判定: width > 1024 ならマウス優先)
+          if (window.innerWidth > 1024) {
+            mx = this.mouse.x + this.cam.x;
+            my = this.mouse.y + this.cam.y;
+          }
+
           const bx = Math.floor(mx / TILE_SIZE);
           const by = Math.floor(my / TILE_SIZE);
+
           if (bx !== this.mining.bx || by !== this.mining.by) {
             this.mining.progress = 0;
             this.mining.bx = bx;
             this.mining.by = by;
           }
-          this.mining.active = true;
-          this.processMining();
+
+          this.processMining(bx, by);
         }
 
-        tryUseItem() {
-          const mx = this.mouse.x + this.cam.x,
+        // 座標指定で設置
+        tryUseItemAt(mx, my) {
+          if (window.innerWidth > 1024) {
+            mx = this.mouse.x + this.cam.x;
             my = this.mouse.y + this.cam.y;
-          const bx = Math.floor(mx / TILE_SIZE),
-            by = Math.floor(my / TILE_SIZE);
+          }
+          const bx = Math.floor(mx / TILE_SIZE);
+          const by = Math.floor(my / TILE_SIZE);
+
           const p = this.players[this.net.myId];
           if (!p) return;
           const item = p.inv[this.selSlot];
           const itemDef = ITEMS[item.id];
+
+          // 食事
           if (itemDef && itemDef.type === "food") {
             this.net.send({ type: "EAT", slot: this.selSlot });
             return;
           }
+          // ブロック設置
           if (BLOCKS[item.id] && !this.isSolid(bx, by)) {
+            // プレイヤーと重ならないか確認
             if (
               !(
                 bx * TILE_SIZE < p.x + 24 &&
@@ -1147,6 +1128,48 @@
                 slot: this.selSlot,
               });
             }
+          }
+        }
+
+        processMining(bx, by) {
+          const id = this.getBlock(bx, by);
+          if (!id || !BLOCKS[id] || BLOCKS[id].unbreakable) {
+            document.getElementById("mining-bar-container").style.display =
+              "none";
+            return;
+          }
+          const p = this.players[this.net.myId];
+          const tool = ITEMS[p.inv[this.selSlot]?.id] || ITEMS[1];
+          const block = BLOCKS[id];
+          let power = tool.power || 1.0;
+          if (block.reqTool && tool.toolType !== block.reqTool) power = 0.5;
+
+          this.mining.progress += power;
+          const pct = Math.min(
+            100,
+            (this.mining.progress / block.hardness) * 100
+          );
+          document.getElementById("mining-bar-container").style.display =
+            "block";
+          document.getElementById("mining-bar").style.width = pct + "%";
+
+          if (this.mining.progress >= block.hardness) {
+            if (!this.net.isHost)
+              this.net.send({ type: "BREAK", x: bx, y: by });
+            this.setBlock(bx, by, 0);
+            if (block.explode) this.net.send({ type: "EXPLODE", x: bx, y: by });
+            let did = BLOCKS[id].drop || id;
+            if (did)
+              this.net.send({
+                type: "DROP",
+                x: bx * TILE_SIZE + 24,
+                y: by * TILE_SIZE + 24,
+                id: did,
+              });
+
+            this.mining.progress = 0;
+            document.getElementById("mining-bar-container").style.display =
+              "none";
           }
         }
 
@@ -1545,17 +1568,15 @@
           } else if (msg.type === "BLOCK") {
             this.setBlock(msg.x, msg.y, msg.id);
           } else if (msg.type === "INIT_PLAYER") {
-            if (!this.players[sender]) {
+            if (!this.players[sender])
               this.spawnPlayer(sender, 0, -200, msg.nick, msg.color);
-            } else {
+            else {
               this.players[sender].nick = msg.nick;
               this.players[sender].color = msg.color;
             }
           } else if (this.net.isHost) {
             if (msg.type === "REQUEST_SYNC") {
-              if (!this.players[sender]) {
-                this.spawnPlayer(sender, 0, -200);
-              }
+              if (!this.players[sender]) this.spawnPlayer(sender, 0, -200);
               this.net.sendTo(sender, {
                 type: "CHUNK_DATA",
                 chunks: this.chunks,
@@ -1583,6 +1604,8 @@
                 this.setBlock(msg.x, msg.y, item.id);
                 item.count--;
                 if (item.count <= 0) item.id = 0;
+                // ★追加: 自分の操作ならUI更新
+                if (sender === this.net.myId) this.updateUI();
               }
             }
             if (msg.type === "BREAK") {
@@ -1679,6 +1702,8 @@
                 p.hp = Math.min(20, p.hp + 2);
                 item.count--;
                 if (item.count <= 0) item.id = 0;
+                // ★追加: 自分の操作ならUI更新
+                if (sender === this.net.myId) this.updateUI();
               }
             }
           }
@@ -1747,12 +1772,20 @@
             }
           }
           if (this.mining.active || !this.mining.active) {
-            const mx = this.mouse.x + this.cam.x,
-              my = this.mouse.y + this.cam.y;
-            const bx = Math.floor(mx / TILE_SIZE),
-              by = Math.floor(my / TILE_SIZE);
-            const wx = bx * TILE_SIZE - this.cam.x,
-              wy = by * TILE_SIZE - this.cam.y;
+            // PCの場合はマウス位置、モバイルの場合は正面
+            let mx = this.mouse.x + this.cam.x;
+            let my = this.mouse.y + this.cam.y;
+            // 簡易的にモバイルかどうか判定
+            if (window.innerWidth <= 1024) {
+              const facing = p.vx >= 0 ? 1 : -1;
+              mx = p.x + facing * 32;
+              my = p.y;
+            }
+
+            const bx = Math.floor(mx / TILE_SIZE);
+            const by = Math.floor(my / TILE_SIZE);
+            const wx = bx * TILE_SIZE - this.cam.x;
+            const wy = by * TILE_SIZE - this.cam.y;
             this.ctx.strokeStyle = "rgba(255,255,255,0.5)";
             this.ctx.lineWidth = 2;
             this.ctx.strokeRect(wx, wy, TILE_SIZE, TILE_SIZE);
@@ -1776,25 +1809,20 @@
               8
             );
           }
-
           for (let id in this.players) {
             const ply = this.players[id];
             const px = ply.x - this.cam.x,
               py = ply.y - this.cam.y;
-
             this.ctx.fillStyle = ply.color || "#ccc";
             this.ctx.fillRect(px, py, 24, 54);
-
             if (ply.hp < 10 && this.time % 10 < 5) {
               this.ctx.fillStyle = "rgba(255,0,0,0.5)";
               this.ctx.fillRect(px, py, 24, 54);
             }
-
             this.ctx.fillStyle = "white";
             this.ctx.font = "12px sans-serif";
             this.ctx.textAlign = "center";
             this.ctx.fillText(ply.nick || "Unknown", px + 12, py - 10);
-
             if (id !== this.net.myId) {
               this.ctx.fillStyle = "red";
               this.ctx.fillRect(px, py - 6, 24, 4);
@@ -1802,9 +1830,11 @@
               this.ctx.fillRect(px, py - 6, (ply.hp / ply.maxHp) * 24, 4);
             }
           }
-
           document.getElementById("time-info").innerText =
-            dayTime < 12000 ? "時間: 昼" : "時間: 夜";
+            dayTime < 12000 ? "昼" : "夜";
+          document.getElementById("coord-info").innerText = `${Math.floor(
+            p.x / TILE_SIZE
+          )}, ${Math.floor(p.y / TILE_SIZE)}`;
           this.sendInput();
         }
 
