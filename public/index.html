@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>P2P Voxel Game</title>
+    <title>FullStackCraft PVP</title>
     <style>
       body {
         margin: 0;
@@ -60,6 +60,14 @@
       }
       button:hover {
         background: #ffb300;
+      }
+      .color-picker {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        color: white;
+        margin-bottom: 15px;
       }
 
       /* HUD */
@@ -307,14 +315,32 @@
   <body>
     <div id="ui-layer">
       <div id="login-screen">
-        <h1>FullStackCraft P2P</h1>
-        <p style="color: #ffd700">WebSocket Signaling / WebRTC Game</p>
+        <h1>FullStackCraft PVP</h1>
+        <p style="color: #ffd700">Multiplayer Voxel Game</p>
+
+        <input
+          type="text"
+          id="nick-input"
+          placeholder="Nickname"
+          value="Player"
+          maxlength="10"
+        />
         <input
           type="text"
           id="room-input"
           placeholder="World Name"
           value="world1"
         />
+        <div class="color-picker">
+          <label>Skin Color: </label>
+          <input
+            type="color"
+            id="color-input"
+            value="#29b6f6"
+            style="width: 50px; padding: 2px; border: none; cursor: pointer"
+          />
+        </div>
+
         <button id="start-btn">Start Game</button>
       </div>
 
@@ -611,15 +637,14 @@
         { in: [15, 1], out: { id: 6, count: 1 }, shapeless: true },
       ];
 
-      // --- P2P Network Logic ---
-      // --- P2P Network Logic (改良版) ---
+      // --- Network Logic ---
       class Network {
         constructor(game) {
           this.game = game;
           this.socket = io();
           this.peers = {};
           this.channels = {};
-          this.candidatesQueue = {}; // 候補を一時保存するキュー
+          this.candidatesQueue = {};
           this.myId = null;
           this.hostId = null;
           this.isHost = false;
@@ -634,7 +659,7 @@
             this.isHost = d.role === "HOST";
             this.hostId = this.isHost ? this.myId : d.hostId;
 
-            // ★変更点: ホスト・クライアント関係なく、役割が決まったらゲームループを開始する
+            // ★役割決定時点でゲームループを開始（描画のため）
             this.game.start();
 
             if (this.isHost) {
@@ -648,7 +673,7 @@
 
           this.socket.on("user-joined", (d) => {
             if (this.isHost) {
-              console.log("User joined, initiating connection to:", d.userId);
+              console.log("User joined, connecting:", d.userId);
               this.connectTo(d.userId, true);
             }
           });
@@ -661,37 +686,31 @@
 
             try {
               if (d.signal.type === "offer") {
-                console.log("Received Offer from", d.sender);
                 await pc.setRemoteDescription(
                   new RTCSessionDescription(d.signal)
                 );
                 const ans = await pc.createAnswer();
                 await pc.setLocalDescription(ans);
                 this.socket.emit("signal", { target: d.sender, signal: ans });
-                // 待機させていた候補があれば処理する
                 this.processQueue(d.sender);
               } else if (d.signal.type === "answer") {
-                console.log("Received Answer from", d.sender);
                 await pc.setRemoteDescription(
                   new RTCSessionDescription(d.signal)
                 );
-                // 待機させていた候補があれば処理する
                 this.processQueue(d.sender);
               } else if (d.signal.candidate) {
-                // RemoteDescriptionがセットされるまで候補はキューに入れる
                 if (pc.remoteDescription && pc.remoteDescription.type) {
                   await pc.addIceCandidate(
                     new RTCIceCandidate(d.signal.candidate)
                   );
                 } else {
-                  console.log("Queueing candidate for", d.sender);
                   if (!this.candidatesQueue[d.sender])
                     this.candidatesQueue[d.sender] = [];
                   this.candidatesQueue[d.sender].push(d.signal.candidate);
                 }
               }
             } catch (err) {
-              console.error("Signaling error:", err);
+              console.error("Signal error:", err);
             }
           });
 
@@ -699,7 +718,6 @@
             this.hostId = d.newHostId;
             if (this.hostId === this.myId) {
               this.isHost = true;
-              this.game.start();
               document.getElementById("loading-screen").style.display = "none";
             } else window.location.reload();
           });
@@ -709,40 +727,27 @@
           const pc = this.peers[id];
           const queue = this.candidatesQueue[id];
           if (queue) {
-            console.log(
-              `Processing ${queue.length} queued candidates for ${id}`
-            );
             while (queue.length > 0) {
               const cand = queue.shift();
               try {
                 await pc.addIceCandidate(new RTCIceCandidate(cand));
-              } catch (e) {
-                console.error("Error adding queued candidate", e);
-              }
+              } catch (e) {}
             }
           }
         }
 
         async connectTo(target, initiator) {
-          console.log(`Connecting to ${target} (Initiator: ${initiator})`);
           const pc = new RTCPeerConnection({
             iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
           });
           this.peers[target] = pc;
 
           pc.onicecandidate = (e) => {
-            if (e.candidate) {
+            if (e.candidate)
               this.socket.emit("signal", {
                 target,
                 signal: { candidate: e.candidate },
               });
-            }
-          };
-
-          pc.onconnectionstatechange = () => {
-            console.log(
-              `Connection state with ${target}: ${pc.connectionState}`
-            );
           };
 
           if (initiator) {
@@ -752,10 +757,7 @@
             await pc.setLocalDescription(off);
             this.socket.emit("signal", { target, signal: off });
           } else {
-            pc.ondatachannel = (e) => {
-              console.log("Received DataChannel from", target);
-              this.setupDC(e.channel, target);
-            };
+            pc.ondatachannel = (e) => this.setupDC(e.channel, target);
           }
         }
 
@@ -763,15 +765,26 @@
           this.channels[target] = dc;
           dc.onopen = () => {
             console.log("DataChannel OPEN with", target);
+
+            // ★自分の情報を送信
+            const myNick =
+              document.getElementById("nick-input").value || "Player";
+            const myColor =
+              document.getElementById("color-input").value || "#29b6f6";
+
+            this.sendTo(target, {
+              type: "INIT_PLAYER",
+              nick: myNick,
+              color: myColor,
+            });
+
             if (!this.isHost) {
-              // 接続確立！同期リクエストを送る
               document.getElementById("loading-screen").innerText =
                 "Synchronizing world...";
               this.sendTo(target, { type: "REQUEST_SYNC" });
             }
           };
           dc.onmessage = (e) => {
-            // 初回メッセージを受け取ったらロード画面を消す
             if (
               document.getElementById("loading-screen").style.display !== "none"
             ) {
@@ -779,7 +792,6 @@
             }
             this.game.onPacket(JSON.parse(e.data), target);
           };
-          dc.onerror = (e) => console.error("DC Error:", e);
         }
 
         send(msg) {
@@ -801,7 +813,7 @@
             this.channels[id].send(JSON.stringify(msg));
         }
       }
-      // --- Game Logic Classes ---
+
       class Mob {
         constructor(id, type, x, y) {
           this.id = id;
@@ -813,7 +825,6 @@
           this.hp = type === "zombie" ? 20 : 10;
           this.w = 32;
           this.h = 48;
-          this.facing = 1;
         }
       }
 
@@ -860,13 +871,11 @@
             "keyup",
             (e) => (this.keys[e.key.toLowerCase()] = false)
           );
-
           window.addEventListener("mousemove", (e) => {
             if (e.target.closest("#mobile-controls")) return;
             this.mouse.x = e.clientX;
             this.mouse.y = e.clientY;
           });
-
           this.canvas.addEventListener("mousedown", (e) =>
             this.handleInputStart(e.clientX, e.clientY, e.button === 2)
           );
@@ -874,6 +883,7 @@
             this.handleInputEnd(e.button === 2)
           );
 
+          // Touch events
           const touchStart = (e) => {
             if (e.touches.length > 0)
               this.handleInputStart(
@@ -883,7 +893,6 @@
               );
           };
           const touchEnd = (e) => this.handleInputEnd(false);
-
           this.canvas.addEventListener("touchstart", touchStart, {
             passive: false,
           });
@@ -893,7 +902,6 @@
           this.canvas.addEventListener("touchcancel", touchEnd, {
             passive: false,
           });
-
           this.canvas.addEventListener(
             "touchmove",
             (e) => {
@@ -905,15 +913,12 @@
             },
             { passive: false }
           );
-
           window.addEventListener("contextmenu", (e) => e.preventDefault());
-
           this.setupMobileControls();
 
           document.getElementById("start-btn").onclick = () => {
             document.getElementById("login-screen").style.display = "none";
             document.getElementById("game-ui").style.display = "block";
-            // WebSocketで部屋に参加 (シグナリング開始)
             this.net.socket.emit(
               "join-room",
               document.getElementById("room-input").value
@@ -921,7 +926,6 @@
           };
           document.getElementById("close-inv-btn").onclick = () =>
             this.toggleInv();
-
           this.initInvUI();
         }
 
@@ -942,7 +946,6 @@
           this.interact.active = false;
           this.mining.active = false;
           this.mining.progress = 0;
-
           const duration = Date.now() - this.interact.startT;
           if (
             duration < this.longPressThreshold ||
@@ -954,11 +957,6 @@
         }
 
         setupMobileControls() {
-          const btnLeft = document.getElementById("btn-left");
-          const btnRight = document.getElementById("btn-right");
-          const btnJump = document.getElementById("btn-jump");
-          const btnInv = document.getElementById("btn-inv");
-
           const bindBtn = (elem, key) => {
             elem.addEventListener("touchstart", (e) => {
               e.preventDefault();
@@ -979,18 +977,20 @@
               this.keys[key] = false;
             });
           };
-
-          bindBtn(btnLeft, "a");
-          bindBtn(btnRight, "d");
-          bindBtn(btnJump, "w");
-
+          bindBtn(document.getElementById("btn-left"), "a");
+          bindBtn(document.getElementById("btn-right"), "d");
+          bindBtn(document.getElementById("btn-jump"), "w");
           const toggle = (e) => {
             e.preventDefault();
             e.stopPropagation();
             this.toggleInv();
           };
-          btnInv.addEventListener("touchstart", toggle);
-          btnInv.addEventListener("mousedown", toggle);
+          document
+            .getElementById("btn-inv")
+            .addEventListener("touchstart", toggle);
+          document
+            .getElementById("btn-inv")
+            .addEventListener("mousedown", toggle);
         }
 
         fitScreen() {
@@ -998,16 +998,18 @@
           this.height = this.canvas.height = window.innerHeight;
         }
         start() {
-          this.spawnPlayer(this.net.myId, 0, -200);
+          // 初期スポーン (仮)
+          const nick = document.getElementById("nick-input").value || "Player";
+          const color =
+            document.getElementById("color-input").value || "#29b6f6";
+          this.spawnPlayer(this.net.myId, 0, -200, nick, color);
           this.loop();
         }
 
         loop() {
           if (this.interact.active) {
             const duration = Date.now() - this.interact.startT;
-            if (duration > this.longPressThreshold) {
-              this.tryAttackOrMine();
-            }
+            if (duration > this.longPressThreshold) this.tryAttackOrMine();
           }
 
           if (this.net.isHost) {
@@ -1030,13 +1032,6 @@
               mobs: this.mobs,
               time: this.time,
             });
-          } else {
-            if (
-              this.players[this.net.myId] &&
-              document.getElementById("loading-screen").style.display !== "none"
-            ) {
-              document.getElementById("loading-screen").style.display = "none";
-            }
           }
 
           this.render();
@@ -1047,15 +1042,12 @@
           const bx = this.mining.bx,
             by = this.mining.by;
           const id = this.getBlock(bx, by);
-
-          if (!id) {
+          if (!id || !BLOCKS[id] || BLOCKS[id].unbreakable) {
             this.mining.active = false;
             document.getElementById("mining-bar-container").style.display =
               "none";
             return;
           }
-          if (!BLOCKS[id] || BLOCKS[id].unbreakable) return;
-
           const p = this.players[this.net.myId];
           const tool = ITEMS[p.inv[this.selSlot]?.id] || ITEMS[1];
           const block = BLOCKS[id];
@@ -1072,9 +1064,12 @@
           document.getElementById("mining-bar").style.width = pct + "%";
 
           if (this.mining.progress >= block.hardness) {
+            // ★ブロック破壊同期
+            if (!this.net.isHost) {
+              this.net.send({ type: "BREAK", x: bx, y: by });
+            }
             this.setBlock(bx, by, 0);
             if (block.explode) this.net.send({ type: "EXPLODE", x: bx, y: by });
-
             let did = BLOCKS[id].drop || id;
             if (did) {
               this.net.send({
@@ -1094,8 +1089,6 @@
         tryAttackOrMine() {
           const mx = this.mouse.x + this.cam.x,
             my = this.mouse.y + this.cam.y;
-
-          const MARGIN = 30;
           const targets = [];
           for (let id in this.mobs)
             targets.push({ type: "mob", obj: this.mobs[id], id });
@@ -1105,31 +1098,27 @@
 
           for (let t of targets) {
             if (
-              mx > t.obj.x - MARGIN &&
-              mx < t.obj.x + 32 + MARGIN &&
-              my > t.obj.y - MARGIN &&
-              my < t.obj.y + 48 + MARGIN
+              mx > t.obj.x - 30 &&
+              mx < t.obj.x + 62 &&
+              my > t.obj.y - 30 &&
+              my < t.obj.y + 78
             ) {
-              if (this.time % 10 === 0) {
+              if (this.time % 10 === 0)
                 this.net.send({
                   type: "HIT",
                   targetId: t.id,
                   targetType: t.type,
                 });
-              }
               return;
             }
           }
-
           const bx = Math.floor(mx / TILE_SIZE);
           const by = Math.floor(my / TILE_SIZE);
-
           if (bx !== this.mining.bx || by !== this.mining.by) {
             this.mining.progress = 0;
             this.mining.bx = bx;
             this.mining.by = by;
           }
-
           this.mining.active = true;
           this.processMining();
         }
@@ -1142,7 +1131,6 @@
           const p = this.players[this.net.myId];
           if (!p) return;
           const item = p.inv[this.selSlot];
-
           const itemDef = ITEMS[item.id];
           if (itemDef && itemDef.type === "food") {
             this.net.send({ type: "EAT", slot: this.selSlot });
@@ -1231,10 +1219,6 @@
               ctx.beginPath();
               ctx.arc(16, 16, 10, 0, Math.PI * 2);
               ctx.fill();
-              if (it.name === "Apple") {
-                ctx.fillStyle = "#0f0";
-                ctx.fillRect(14, 4, 4, 4);
-              }
             } else {
               ctx.fillStyle = it.iconColor || "#fff";
               ctx.fillRect(8, 8, 16, 16);
@@ -1302,8 +1286,8 @@
           }, 10);
         }
         getBlock(gx, gy) {
-          const cx = Math.floor(gx / CHUNK_SIZE);
-          const cy = Math.floor(gy / CHUNK_SIZE);
+          const cx = Math.floor(gx / CHUNK_SIZE),
+            cy = Math.floor(gy / CHUNK_SIZE);
           const chunk = this.chunks[this.getChunkKey(cx, cy)];
           if (!chunk) return 0;
           const lx = ((gx % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
@@ -1311,10 +1295,9 @@
           return chunk[ly * CHUNK_SIZE + lx];
         }
         setBlock(gx, gy, id) {
-          const cx = Math.floor(gx / CHUNK_SIZE);
-          const cy = Math.floor(gy / CHUNK_SIZE);
-          const key = this.getChunkKey(cx, cy);
-          let chunk = this.chunks[key];
+          const cx = Math.floor(gx / CHUNK_SIZE),
+            cy = Math.floor(gy / CHUNK_SIZE);
+          const chunk = this.chunks[this.getChunkKey(cx, cy)];
           if (!chunk) return;
           const lx = ((gx % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
           const ly = ((gy % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
@@ -1373,10 +1356,9 @@
           if (Object.keys(this.mobs).length < 5 && Math.random() < 0.02) {
             const mid = Math.random().toString(36).substr(2, 5);
             const isNight = this.time % 24000 > 12000;
-            const type = isNight ? "zombie" : "cow";
             this.mobs[mid] = new Mob(
               mid,
-              type,
+              isNight ? "zombie" : "cow",
               Math.random() * 1000 - 500,
               -200
             );
@@ -1415,9 +1397,7 @@
                   target.vy = -5;
                 }
               } else m.vx = 0;
-            } else {
-              if (Math.random() < 0.01) m.vx = (Math.random() - 0.5) * 2;
-            }
+            } else if (Math.random() < 0.01) m.vx = (Math.random() - 0.5) * 2;
             m.x += m.vx;
             if (m.y > 2000) delete this.mobs[id];
           }
@@ -1467,17 +1447,19 @@
               }
           if (axis === "y") e.grounded = false;
         }
-
         isSolid(x, y) {
           const id = this.getBlock(x, y);
           return id && BLOCKS[id] && BLOCKS[id].solid;
         }
 
-        spawnPlayer(id, x, y) {
+        // ★修正: ニックネームと色を追加
+        spawnPlayer(id, x, y, nick = "Player", color = "#ccc") {
           this.players[id] = {
             id,
             x,
             y,
+            nick,
+            color,
             vx: 0,
             vy: 0,
             hp: 20,
@@ -1516,11 +1498,12 @@
           const gridIds = this.craftGrid.map((slot) => slot.id);
           for (let r of RECIPES) {
             if (r.shapeless) {
-              const inIds = r.in.slice();
-              const gIds = gridIds.filter((id) => id !== 0);
-              if (inIds.length !== gIds.length) continue;
-              const match = inIds.every((id) => gIds.includes(id));
-              if (match) {
+              const inIds = r.in.slice(),
+                gIds = gridIds.filter((id) => id !== 0);
+              if (
+                inIds.length === gIds.length &&
+                inIds.every((id) => gIds.includes(id))
+              ) {
                 this.craftResult = { id: r.out.id, count: r.out.count };
                 this.updateCraftUI();
                 return;
@@ -1554,6 +1537,7 @@
           );
           this.checkCrafting();
         }
+
         onPacket(msg, sender) {
           if (msg.type === "CHUNK_DATA") {
             for (let k in msg.chunks)
@@ -1566,14 +1550,21 @@
             this.updateUI();
           } else if (msg.type === "BLOCK") {
             this.setBlock(msg.x, msg.y, msg.id);
-          } else if (this.net.isHost) {
-            // ★追加: ホスト側にこの送信者(クライアント)のデータがなければ作る
-            if (!this.players[sender]) {
-              console.log("Spawning new player:", sender);
-              this.spawnPlayer(sender, 0, -200);
-            }
 
+            // ★追加: プレイヤー情報初期化受信
+          } else if (msg.type === "INIT_PLAYER") {
+            if (!this.players[sender]) {
+              this.spawnPlayer(sender, 0, -200, msg.nick, msg.color);
+            } else {
+              this.players[sender].nick = msg.nick;
+              this.players[sender].color = msg.color;
+            }
+          } else if (this.net.isHost) {
             if (msg.type === "REQUEST_SYNC") {
+              // ホスト側に存在しない場合は生成 (まだINIT_PLAYERが来ていない場合など)
+              if (!this.players[sender]) {
+                this.spawnPlayer(sender, 0, -200);
+              }
               this.net.sendTo(sender, {
                 type: "CHUNK_DATA",
                 chunks: this.chunks,
@@ -1602,6 +1593,10 @@
                 item.count--;
                 if (item.count <= 0) item.id = 0;
               }
+            }
+            // ★追加: ブロック破壊受信
+            if (msg.type === "BREAK") {
+              this.setBlock(msg.x, msg.y, 0);
             }
             if (msg.type === "DROP") {
               this.drops.push({
@@ -1633,23 +1628,21 @@
                 const dist = Math.hypot(e.x - blastX, e.y - blastY);
                 if (dist < radius) {
                   const damage = Math.floor((1 - dist / radius) * 20);
-                  const knockback = (1 - dist / radius) * 15;
                   const angle = Math.atan2(e.y - blastY, e.x - blastX);
+                  const knockback = (1 - dist / radius) * 15;
                   if (e.type === "player") {
-                    const target = this.players[e.id];
-                    target.hp -= damage;
-                    target.vx += Math.cos(angle) * knockback;
-                    target.vy += Math.sin(angle) * knockback - 5;
-                    if (target.hp <= 0) this.killPlayer(e.id);
+                    const t = this.players[e.id];
+                    t.hp -= damage;
+                    t.vx += Math.cos(angle) * knockback;
+                    t.vy += Math.sin(angle) * knockback - 5;
+                    if (t.hp <= 0) this.killPlayer(e.id);
                   } else {
-                    const target = this.mobs[e.id];
-                    if (target) {
-                      target.hp -= damage;
-                      target.vx += Math.cos(angle) * knockback;
-                      target.vy += Math.sin(angle) * knockback - 5;
-                      if (target.hp <= 0) {
-                        delete this.mobs[e.id];
-                      }
+                    const t = this.mobs[e.id];
+                    if (t) {
+                      t.hp -= damage;
+                      t.vx += Math.cos(angle) * knockback;
+                      t.vy += Math.sin(angle) * knockback - 5;
+                      if (t.hp <= 0) delete this.mobs[e.id];
                     }
                   }
                 }
@@ -1712,11 +1705,9 @@
 
         render() {
           if (!this.players[this.net.myId]) return;
-
           const p = this.players[this.net.myId];
           this.cam.x += (p.x - this.width / 2 - this.cam.x) * 0.1;
           this.cam.y += (p.y - this.height / 2 - this.cam.y) * 0.1;
-
           const dayTime = this.time % 24000;
           let skyColor = "#87CEEB",
             light = 1.0;
@@ -1724,7 +1715,6 @@
             skyColor = "#1a237e";
             light = 0.4;
           }
-
           this.ctx.fillStyle = skyColor;
           this.ctx.fillRect(0, 0, this.width, this.height);
 
@@ -1766,7 +1756,6 @@
               }
             }
           }
-
           if (this.mining.active || !this.mining.active) {
             const mx = this.mouse.x + this.cam.x,
               my = this.mouse.y + this.cam.y;
@@ -1778,14 +1767,12 @@
             this.ctx.lineWidth = 2;
             this.ctx.strokeRect(wx, wy, TILE_SIZE, TILE_SIZE);
           }
-
           this.drops.forEach((d) => {
             const i =
               this.assets.blocks[d.itemId] || this.assets.items[d.itemId];
             if (i)
               this.ctx.drawImage(i, d.x - this.cam.x, d.y - this.cam.y, 20, 20);
           });
-
           for (let id in this.mobs) {
             const m = this.mobs[id];
             this.ctx.fillStyle = m.type === "zombie" ? "#2e7d32" : "#795548";
@@ -1804,8 +1791,29 @@
             const ply = this.players[id];
             const px = ply.x - this.cam.x,
               py = ply.y - this.cam.y;
-            this.ctx.fillStyle = id === this.net.myId ? "#29b6f6" : "#ccc";
+
+            // ★変更: スキン色と点滅表現
+            this.ctx.fillStyle = ply.color || "#ccc";
             this.ctx.fillRect(px, py, 24, 54);
+
+            if (ply.hp < 10 && this.time % 10 < 5) {
+              this.ctx.fillStyle = "rgba(255,0,0,0.5)";
+              this.ctx.fillRect(px, py, 24, 54);
+            }
+
+            // ★追加: ニックネーム描画
+            this.ctx.fillStyle = "white";
+            this.ctx.font = "12px Consolas";
+            this.ctx.textAlign = "center";
+            this.ctx.fillText(ply.nick || "Unknown", px + 12, py - 10);
+
+            // ★追加: 簡易HPバー (他人のHP)
+            if (id !== this.net.myId) {
+              this.ctx.fillStyle = "red";
+              this.ctx.fillRect(px, py - 6, 24, 4);
+              this.ctx.fillStyle = "#0f0";
+              this.ctx.fillRect(px, py - 6, (ply.hp / ply.maxHp) * 24, 4);
+            }
           }
 
           document.getElementById("time-info").innerText =
