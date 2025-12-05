@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>FullStackCraft v23 - Perfect Fix</title>
+    <title>FullStackCraft v24 - Final Fix</title>
     <style>
       body {
         margin: 0;
@@ -162,22 +162,25 @@
         line-height: 16px;
       }
 
+      /* 採掘バー */
       #mining-bar-container {
         position: absolute;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        width: 100px;
+        width: 80px;
         height: 10px;
-        background: rgba(0, 0, 0, 0.5);
-        border: 1px solid white;
+        background: rgba(0, 0, 0, 0.6);
+        border: 2px solid white;
         display: none;
-        z-index: 80;
+        z-index: 100;
+        pointer-events: none;
       }
       #mining-bar {
         width: 0%;
         height: 100%;
-        background: #76ff03;
+        background: #00e676;
+        transition: width 0.05s linear;
       }
 
       #inventory-screen {
@@ -304,8 +307,8 @@
   <body>
     <div id="ui-layer">
       <div id="login-screen">
-        <h1>FullStackCraft v23</h1>
-        <p style="color: #ffd700">TNT & DROP & CONNECT FIX</p>
+        <h1>FullStackCraft v24</h1>
+        <p style="color: #ffd700">FINAL FIX UPDATE</p>
         <p>Short Tap: Place | Hold: Mine</p>
         <input
           type="text"
@@ -387,56 +390,56 @@
     <script src="/socket.io/socket.io.js"></script>
 
     <script>
-      // FullStackCraft v23 - Perfect Fix
+      // FullStackCraft v24 - Final Fix
       const TILE_SIZE = 48;
       const CHUNK_SIZE = 16;
       const GRAVITY = 0.5;
 
+      // ★硬度(hardness)を全体的に下げ、破壊しやすく調整
       const BLOCKS = {
         0: { name: "Air", solid: false },
         1: {
           name: "Grass",
           color: "#5b8a36",
           solid: true,
-          hardness: 80,
+          hardness: 30,
           drop: 2,
         },
         2: {
           name: "Dirt",
           color: "#704828",
           solid: true,
-          hardness: 80,
+          hardness: 30,
           drop: 2,
         },
         3: {
           name: "Stone",
           color: "#757575",
           solid: true,
-          hardness: 300,
+          hardness: 80,
           reqTool: "pickaxe",
           drop: 21,
         },
-        // ★修正: 木(Log)の硬度を下げ、ツール指定を削除（素手でも壊しやすく、ドロップするように）
         4: {
           name: "Log",
           color: "#5d4037",
           solid: true,
-          hardness: 80,
+          hardness: 40,
           drop: 4,
-        },
+        }, // 素手でも早めに壊れる
         5: {
           name: "Leaves",
           color: "#388e3c",
           solid: true,
-          hardness: 10,
+          hardness: 5,
           drop: 300,
         },
-        // ★修正: 木材(Planks)も同様
         6: {
           name: "Planks",
           color: "#8d6e63",
           solid: true,
-          hardness: 60,
+          hardness: 30,
+          reqTool: "axe",
           drop: 6,
         },
         7: {
@@ -450,7 +453,7 @@
           name: "Sand",
           color: "#fdd835",
           solid: true,
-          hardness: 60,
+          hardness: 20,
           drop: 8,
         },
         9: {
@@ -464,14 +467,14 @@
           name: "Glass",
           color: "rgba(255,255,255,0.3)",
           solid: true,
-          hardness: 30,
+          hardness: 10,
           drop: 0,
         },
         11: {
           name: "CoalOre",
           color: "#222",
           solid: true,
-          hardness: 400,
+          hardness: 100,
           type: "ore",
           oreColor: "#111",
           drop: 201,
@@ -480,7 +483,7 @@
           name: "IronOre",
           color: "#aaa",
           solid: true,
-          hardness: 500,
+          hardness: 120,
           type: "ore",
           oreColor: "#dcb",
           drop: 202,
@@ -489,7 +492,7 @@
           name: "GoldOre",
           color: "#dd0",
           solid: true,
-          hardness: 600,
+          hardness: 150,
           type: "ore",
           oreColor: "#fe0",
           drop: 203,
@@ -498,7 +501,7 @@
           name: "DiamondOre",
           color: "#0ee",
           solid: true,
-          hardness: 800,
+          hardness: 200,
           type: "ore",
           oreColor: "#0ff",
           drop: 204,
@@ -507,7 +510,7 @@
           name: "Cactus",
           color: "#1b5e20",
           solid: true,
-          hardness: 50,
+          hardness: 20,
           dmg: 1,
           drop: 15,
         },
@@ -515,7 +518,7 @@
           name: "TNT",
           color: "#d32f2f",
           solid: true,
-          hardness: 20,
+          hardness: 10,
           drop: 16,
           explode: true,
         },
@@ -523,7 +526,7 @@
           name: "Cobble",
           color: "#555",
           solid: true,
-          hardness: 300,
+          hardness: 80,
           type: "brick",
           reqTool: "pickaxe",
           drop: 21,
@@ -532,7 +535,7 @@
           name: "CraftTable",
           color: "#a1887f",
           solid: true,
-          hardness: 150,
+          hardness: 50,
           type: "table",
           reqTool: "axe",
           drop: 31,
@@ -623,7 +626,6 @@
 
           this.socket.on("connect", () => {
             this.myId = this.socket.id;
-            console.log("Connected as " + this.myId);
           });
           this.socket.on("role-assigned", (d) => {
             this.isHost = d.role === "HOST";
@@ -684,8 +686,6 @@
           this.channels[target] = dc;
           dc.onopen = () => {
             if (this.isHost) {
-              // ★重要: 接続確立直後に地形データだけでなく、プレイヤー情報(SYNC)も送る
-              // これがないとクライアントはずっとloading-screenのままになる
               this.sendTo(target, {
                 type: "CHUNK_DATA",
                 chunks: this.game.chunks,
@@ -752,7 +752,7 @@
           this.mining = { active: false, bx: 0, by: 0, progress: 0 };
 
           this.interact = { startT: 0, active: false };
-          this.longPressThreshold = 250;
+          this.longPressThreshold = 200; // 少し短くして反応良く
 
           this.craftGrid = Array(9).fill({ id: 0, count: 0 });
           this.craftResult = { id: 0, count: 0 };
@@ -789,23 +789,28 @@
           this.canvas.addEventListener("mouseup", (e) =>
             this.handleInputEnd(e.button === 2)
           );
-          this.canvas.addEventListener(
-            "touchstart",
-            (e) => {
-              if (e.touches.length > 0)
-                this.handleInputStart(
-                  e.touches[0].clientX,
-                  e.touches[0].clientY,
-                  false
-                );
-            },
-            { passive: false }
-          );
-          this.canvas.addEventListener(
-            "touchend",
-            (e) => this.handleInputEnd(false),
-            { passive: false }
-          );
+
+          // Touch events
+          const touchStart = (e) => {
+            if (e.touches.length > 0)
+              this.handleInputStart(
+                e.touches[0].clientX,
+                e.touches[0].clientY,
+                false
+              );
+          };
+          const touchEnd = (e) => this.handleInputEnd(false);
+
+          this.canvas.addEventListener("touchstart", touchStart, {
+            passive: false,
+          });
+          this.canvas.addEventListener("touchend", touchEnd, {
+            passive: false,
+          });
+          this.canvas.addEventListener("touchcancel", touchEnd, {
+            passive: false,
+          }); // キャンセル時も終了
+
           this.canvas.addEventListener(
             "touchmove",
             (e) => {
@@ -855,6 +860,7 @@
           this.mining.progress = 0;
 
           const duration = Date.now() - this.interact.startT;
+          // Short tap or right click -> Place/Interact
           if (
             duration < this.longPressThreshold ||
             isRightClick ||
@@ -955,18 +961,14 @@
         }
 
         processMining() {
-          if (!this.mining.active) {
-            document.getElementById("mining-bar-container").style.display =
-              "none";
-            return;
-          }
-
           const bx = this.mining.bx,
             by = this.mining.by;
           const id = this.getBlock(bx, by);
 
           if (!id) {
             this.mining.active = false;
+            document.getElementById("mining-bar-container").style.display =
+              "none";
             return;
           }
           if (BLOCKS[id].unbreakable) return;
@@ -988,10 +990,8 @@
 
           if (this.mining.progress >= block.hardness) {
             this.setBlock(bx, by, 0);
-
             if (block.explode) this.net.send({ type: "EXPLODE", x: bx, y: by });
 
-            // ★ドロップ処理復活
             let did = BLOCKS[id].drop || id;
             if (did) {
               this.net.send({
@@ -1001,9 +1001,10 @@
                 id: did,
               });
             }
-
             this.mining.progress = 0;
             this.mining.active = false;
+            document.getElementById("mining-bar-container").style.display =
+              "none";
           }
         }
 
@@ -1037,9 +1038,17 @@
             }
           }
 
+          const bx = Math.floor(mx / TILE_SIZE);
+          const by = Math.floor(my / TILE_SIZE);
+
+          // ターゲットが変わったら進行度リセット
+          if (bx !== this.mining.bx || by !== this.mining.by) {
+            this.mining.progress = 0;
+            this.mining.bx = bx;
+            this.mining.by = by;
+          }
+
           this.mining.active = true;
-          this.mining.bx = Math.floor(mx / TILE_SIZE);
-          this.mining.by = Math.floor(my / TILE_SIZE);
           this.processMining();
         }
 
@@ -1051,8 +1060,6 @@
           const p = this.players[this.net.myId];
           if (!p) return;
           const item = p.inv[this.selSlot];
-
-          // ★修正: TNT設置制限を解除 (if文削除)
 
           const itemDef = ITEMS[item.id];
           if (itemDef && itemDef.type === "food") {
@@ -1078,6 +1085,7 @@
           }
         }
 
+        // --- Standard Methods ---
         genAssets() {
           for (let id in BLOCKS) {
             if (id == 0) continue;
