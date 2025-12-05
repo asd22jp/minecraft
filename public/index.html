@@ -633,8 +633,11 @@
             console.log("Role assigned:", d.role);
             this.isHost = d.role === "HOST";
             this.hostId = this.isHost ? this.myId : d.hostId;
+
+            // ★変更点: ホスト・クライアント関係なく、役割が決まったらゲームループを開始する
+            this.game.start();
+
             if (this.isHost) {
-              this.game.start();
               document.getElementById("loading-screen").style.display = "none";
             } else {
               document.getElementById("loading-screen").style.display = "flex";
