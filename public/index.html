@@ -612,52 +612,87 @@
       ];
 
       // --- P2P Network Logic ---
+      // --- P2P Network Logic (改良版) ---
       class Network {
         constructor(game) {
           this.game = game;
-          this.socket = io(); // WebSocketはシグナリングのみ
+          this.socket = io();
           this.peers = {};
           this.channels = {};
+          this.candidatesQueue = {}; // 候補を一時保存するキュー
           this.myId = null;
           this.hostId = null;
           this.isHost = false;
 
-          // 1. WebSocketイベント (シグナリングと役割分担)
           this.socket.on("connect", () => {
             this.myId = this.socket.id;
+            console.log("Socket connected:", this.myId);
           });
+
           this.socket.on("role-assigned", (d) => {
+            console.log("Role assigned:", d.role);
             this.isHost = d.role === "HOST";
             this.hostId = this.isHost ? this.myId : d.hostId;
             if (this.isHost) {
-              // ホストなら即ゲーム開始
               this.game.start();
               document.getElementById("loading-screen").style.display = "none";
             } else {
-              // クライアントならWebRTC接続待機画面
               document.getElementById("loading-screen").style.display = "flex";
+              document.getElementById("loading-screen").innerText =
+                "Waiting for host...";
             }
           });
+
           this.socket.on("user-joined", (d) => {
-            // ホスト側: 新規参加者にWebRTC接続オファーを送る
-            if (this.isHost) this.connectTo(d.userId, true);
+            if (this.isHost) {
+              console.log("User joined, initiating connection to:", d.userId);
+              this.connectTo(d.userId, true);
+            }
           });
+
           this.socket.on("signal", async (d) => {
-            // P2Pシグナリング受信処理
-            if (!this.peers[d.sender]) await this.connectTo(d.sender, false);
+            if (!this.peers[d.sender]) {
+              await this.connectTo(d.sender, false);
+            }
             const pc = this.peers[d.sender];
-            if (d.signal.type === "offer") {
-              await pc.setRemoteDescription(d.signal);
-              const ans = await pc.createAnswer();
-              await pc.setLocalDescription(ans);
-              this.socket.emit("signal", { target: d.sender, signal: ans });
-            } else if (d.signal.type === "answer")
-              await pc.setRemoteDescription(d.signal);
-            else if (d.signal.candidate)
-              await pc.addIceCandidate(d.signal.candidate);
+
+            try {
+              if (d.signal.type === "offer") {
+                console.log("Received Offer from", d.sender);
+                await pc.setRemoteDescription(
+                  new RTCSessionDescription(d.signal)
+                );
+                const ans = await pc.createAnswer();
+                await pc.setLocalDescription(ans);
+                this.socket.emit("signal", { target: d.sender, signal: ans });
+                // 待機させていた候補があれば処理する
+                this.processQueue(d.sender);
+              } else if (d.signal.type === "answer") {
+                console.log("Received Answer from", d.sender);
+                await pc.setRemoteDescription(
+                  new RTCSessionDescription(d.signal)
+                );
+                // 待機させていた候補があれば処理する
+                this.processQueue(d.sender);
+              } else if (d.signal.candidate) {
+                // RemoteDescriptionがセットされるまで候補はキューに入れる
+                if (pc.remoteDescription && pc.remoteDescription.type) {
+                  await pc.addIceCandidate(
+                    new RTCIceCandidate(d.signal.candidate)
+                  );
+                } else {
+                  console.log("Queueing candidate for", d.sender);
+                  if (!this.candidatesQueue[d.sender])
+                    this.candidatesQueue[d.sender] = [];
+                  this.candidatesQueue[d.sender].push(d.signal.candidate);
+                }
+              }
+            } catch (err) {
+              console.error("Signaling error:", err);
+            }
           });
+
           this.socket.on("host-migrated", (d) => {
-            // ホスト移行処理
             this.hostId = d.newHostId;
             if (this.hostId === this.myId) {
               this.isHost = true;
@@ -667,53 +702,87 @@
           });
         }
 
-        // 2. WebRTC接続確立
+        async processQueue(id) {
+          const pc = this.peers[id];
+          const queue = this.candidatesQueue[id];
+          if (queue) {
+            console.log(
+              `Processing ${queue.length} queued candidates for ${id}`
+            );
+            while (queue.length > 0) {
+              const cand = queue.shift();
+              try {
+                await pc.addIceCandidate(new RTCIceCandidate(cand));
+              } catch (e) {
+                console.error("Error adding queued candidate", e);
+              }
+            }
+          }
+        }
+
         async connectTo(target, initiator) {
+          console.log(`Connecting to ${target} (Initiator: ${initiator})`);
           const pc = new RTCPeerConnection({
             iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
           });
           this.peers[target] = pc;
 
-          // ICE Candidate (経路情報) をWebSocket経由で交換
           pc.onicecandidate = (e) => {
-            if (e.candidate)
+            if (e.candidate) {
               this.socket.emit("signal", {
                 target,
                 signal: { candidate: e.candidate },
               });
+            }
+          };
+
+          pc.onconnectionstatechange = () => {
+            console.log(
+              `Connection state with ${target}: ${pc.connectionState}`
+            );
           };
 
           if (initiator) {
-            // データチャンネル作成 (ゲームデータのパイプライン)
             const dc = pc.createDataChannel("game");
             this.setupDC(dc, target);
             const off = await pc.createOffer();
             await pc.setLocalDescription(off);
-            // オファーをWebSocket経由で送信
             this.socket.emit("signal", { target, signal: off });
-          } else pc.ondatachannel = (e) => this.setupDC(e.channel, target);
+          } else {
+            pc.ondatachannel = (e) => {
+              console.log("Received DataChannel from", target);
+              this.setupDC(e.channel, target);
+            };
+          }
         }
 
-        // 3. DataChannelセットアップ (ゲームデータ送受信)
         setupDC(dc, target) {
           this.channels[target] = dc;
           dc.onopen = () => {
-            // 接続完了。クライアントなら同期リクエストを送る
+            console.log("DataChannel OPEN with", target);
             if (!this.isHost) {
+              // 接続確立！同期リクエストを送る
+              document.getElementById("loading-screen").innerText =
+                "Synchronizing world...";
               this.sendTo(target, { type: "REQUEST_SYNC" });
             }
           };
-          // P2P経由でメッセージ受信
-          dc.onmessage = (e) => this.game.onPacket(JSON.parse(e.data), target);
+          dc.onmessage = (e) => {
+            // 初回メッセージを受け取ったらロード画面を消す
+            if (
+              document.getElementById("loading-screen").style.display !== "none"
+            ) {
+              document.getElementById("loading-screen").style.display = "none";
+            }
+            this.game.onPacket(JSON.parse(e.data), target);
+          };
+          dc.onerror = (e) => console.error("DC Error:", e);
         }
 
-        // 4. データ送信 (P2Pのみ使用)
         send(msg) {
           if (this.isHost) {
-            // ホストは自分自身へ処理を回す
             this.game.onPacket(msg, this.myId);
           } else if (this.hostId && this.channels[this.hostId]) {
-            // クライアントはホストへ送信
             this.channels[this.hostId].send(JSON.stringify(msg));
           }
         }
@@ -729,7 +798,6 @@
             this.channels[id].send(JSON.stringify(msg));
         }
       }
-
       // --- Game Logic Classes ---
       class Mob {
         constructor(id, type, x, y) {
