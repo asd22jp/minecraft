@@ -1567,6 +1567,12 @@
           } else if (msg.type === "BLOCK") {
             this.setBlock(msg.x, msg.y, msg.id);
           } else if (this.net.isHost) {
+            // ★追加: ホスト側にこの送信者(クライアント)のデータがなければ作る
+            if (!this.players[sender]) {
+              console.log("Spawning new player:", sender);
+              this.spawnPlayer(sender, 0, -200);
+            }
+
             if (msg.type === "REQUEST_SYNC") {
               this.net.sendTo(sender, {
                 type: "CHUNK_DATA",
