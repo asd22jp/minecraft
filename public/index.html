@@ -6,13 +6,14 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>FullStackCraft PVP</title>
+    <title>Craft beta (日本語版)</title>
     <style>
       body {
         margin: 0;
         overflow: hidden;
         background: #000;
-        font-family: "Consolas", sans-serif;
+        font-family: "Hiragino Kaku Gothic ProN", "Meiryo", "Consolas",
+          sans-serif;
         user-select: none;
         -webkit-user-select: none;
         touch-action: none;
@@ -51,6 +52,7 @@
         width: 200px;
         display: block;
         margin: 10px auto;
+        font-family: inherit;
       }
       button {
         background: #ffca28;
@@ -214,6 +216,13 @@
         flex-direction: column;
         align-items: center;
       }
+      h2 {
+        margin: 0 0 10px 0;
+        border-bottom: 1px solid #555;
+        width: 100%;
+        text-align: center;
+        padding-bottom: 5px;
+      }
       #inv-grid,
       #craft-grid {
         display: grid;
@@ -258,7 +267,7 @@
         justify-content: center;
         flex-direction: column;
         color: white;
-        font-size: 30px;
+        font-size: 24px;
         pointer-events: auto;
         z-index: 200;
       }
@@ -315,24 +324,24 @@
   <body>
     <div id="ui-layer">
       <div id="login-screen">
-        <h1>FullStackCraft PVP</h1>
-        <p style="color: #ffd700">Multiplayer Voxel Game</p>
+        <h1>beta</h1>
+        <p style="color: #ffd700">マルチプレイ ボクセルゲーム</p>
 
         <input
           type="text"
           id="nick-input"
-          placeholder="Nickname"
-          value="Player"
+          placeholder="ニックネーム"
+          value="プレイヤー"
           maxlength="10"
         />
         <input
           type="text"
           id="room-input"
-          placeholder="World Name"
+          placeholder="ワールド名"
           value="world1"
         />
         <div class="color-picker">
-          <label>Skin Color: </label>
+          <label>スキンの色: </label>
           <input
             type="color"
             id="color-input"
@@ -341,15 +350,15 @@
           />
         </div>
 
-        <button id="start-btn">Start Game</button>
+        <button id="start-btn">ゲーム開始</button>
       </div>
 
-      <div id="loading-screen">Connecting via WebRTC...</div>
+      <div id="loading-screen">接続待機中...</div>
 
       <div id="game-ui" style="display: none">
         <div id="hud-top">
           <span id="coord-info">X:0 Y:0</span> |
-          <span id="time-info">Time: Day</span>
+          <span id="time-info">時間: 昼</span>
         </div>
         <div id="inventory-bar"></div>
 
@@ -360,7 +369,7 @@
           </div>
           <div class="bar-bg">
             <div id="food-bar"></div>
-            <span class="bar-label">Food</span>
+            <span class="bar-label">満腹度</span>
           </div>
         </div>
 
@@ -383,7 +392,7 @@
                 background: rgba(0, 0, 255, 0.3);
               "
             >
-              INV
+              鞄
             </div>
             <div class="m-btn" id="btn-jump">▲</div>
           </div>
@@ -391,23 +400,23 @@
 
         <div id="inventory-screen">
           <div class="panel">
-            <h2>Backpack</h2>
+            <h2>持ち物</h2>
             <div id="inv-grid"></div>
           </div>
           <div class="panel">
-            <h2>Crafting</h2>
+            <h2>クラフト</h2>
             <div id="craft-grid"></div>
             <div style="font-size: 24px; margin: 5px">➡</div>
             <div id="craft-result-slot" class="slot"></div>
           </div>
           <button id="close-inv-btn" style="background: #d32f2f; color: white">
-            Close
+            閉じる
           </button>
         </div>
       </div>
       <div id="death-screen">
-        <div>YOU DIED</div>
-        <button onclick="window.location.reload()">Respawn</button>
+        <div>死亡しました</div>
+        <button onclick="window.location.reload()">リスポーン</button>
       </div>
     </div>
     <canvas id="game-canvas"></canvas>
@@ -419,24 +428,19 @@
       const CHUNK_SIZE = 16;
       const GRAVITY = 0.5;
 
+      // アイテム・ブロック名を日本語化
       const BLOCKS = {
-        0: { name: "Air", solid: false },
+        0: { name: "空気", solid: false },
         1: {
-          name: "Grass",
+          name: "草ブロック",
           color: "#5b8a36",
           solid: true,
           hardness: 30,
           drop: 2,
         },
-        2: {
-          name: "Dirt",
-          color: "#704828",
-          solid: true,
-          hardness: 30,
-          drop: 2,
-        },
+        2: { name: "土", color: "#704828", solid: true, hardness: 30, drop: 2 },
         3: {
-          name: "Stone",
+          name: "石",
           color: "#757575",
           solid: true,
           hardness: 80,
@@ -444,21 +448,21 @@
           drop: 21,
         },
         4: {
-          name: "Log",
+          name: "原木",
           color: "#5d4037",
           solid: true,
           hardness: 40,
           drop: 4,
         },
         5: {
-          name: "Leaves",
+          name: "葉",
           color: "#388e3c",
           solid: true,
           hardness: 5,
           drop: 300,
         },
         6: {
-          name: "Planks",
+          name: "木材",
           color: "#8d6e63",
           solid: true,
           hardness: 30,
@@ -466,35 +470,29 @@
           drop: 6,
         },
         7: {
-          name: "Bedrock",
+          name: "岩盤",
           color: "#000",
           solid: true,
           hardness: Infinity,
           unbreakable: true,
         },
-        8: {
-          name: "Sand",
-          color: "#fdd835",
-          solid: true,
-          hardness: 20,
-          drop: 8,
-        },
+        8: { name: "砂", color: "#fdd835", solid: true, hardness: 20, drop: 8 },
         9: {
-          name: "Water",
+          name: "水",
           color: "rgba(33,150,243,0.6)",
           solid: false,
           liquid: true,
           hardness: Infinity,
         },
         10: {
-          name: "Glass",
+          name: "ガラス",
           color: "rgba(255,255,255,0.3)",
           solid: true,
           hardness: 10,
           drop: 0,
         },
         11: {
-          name: "CoalOre",
+          name: "石炭鉱石",
           color: "#222",
           solid: true,
           hardness: 100,
@@ -503,7 +501,7 @@
           drop: 201,
         },
         12: {
-          name: "IronOre",
+          name: "鉄鉱石",
           color: "#aaa",
           solid: true,
           hardness: 120,
@@ -512,7 +510,7 @@
           drop: 202,
         },
         13: {
-          name: "GoldOre",
+          name: "金鉱石",
           color: "#dd0",
           solid: true,
           hardness: 150,
@@ -521,7 +519,7 @@
           drop: 203,
         },
         14: {
-          name: "DiamondOre",
+          name: "ダイヤ鉱石",
           color: "#0ee",
           solid: true,
           hardness: 200,
@@ -530,7 +528,7 @@
           drop: 204,
         },
         15: {
-          name: "Cactus",
+          name: "サボテン",
           color: "#1b5e20",
           solid: true,
           hardness: 20,
@@ -546,7 +544,7 @@
           explode: true,
         },
         21: {
-          name: "Cobble",
+          name: "丸石",
           color: "#555",
           solid: true,
           hardness: 80,
@@ -555,7 +553,7 @@
           drop: 21,
         },
         31: {
-          name: "CraftTable",
+          name: "作業台",
           color: "#a1887f",
           solid: true,
           hardness: 50,
@@ -566,51 +564,51 @@
       };
 
       const ITEMS = {
-        0: { name: "Air" },
-        1: { name: "Hand", power: 1.0 },
+        0: { name: "空気" },
+        1: { name: "素手", power: 1.0 },
         100: {
-          name: "WoodPick",
+          name: "木のツルハシ",
           power: 3.0,
           type: "tool",
           toolType: "pickaxe",
           iconColor: "#8d6e63",
         },
         101: {
-          name: "StonePick",
+          name: "石のツルハシ",
           power: 6.0,
           type: "tool",
           toolType: "pickaxe",
           iconColor: "#757575",
         },
         110: {
-          name: "WoodAxe",
+          name: "木の斧",
           power: 3.0,
           type: "tool",
           toolType: "axe",
           iconColor: "#8d6e63",
         },
         120: {
-          name: "WoodShovel",
+          name: "木のシャベル",
           power: 3.0,
           type: "tool",
           toolType: "shovel",
           iconColor: "#8d6e63",
         },
         130: {
-          name: "IronSword",
+          name: "鉄の剣",
           power: 8.0,
           type: "weapon",
           toolType: "sword",
           iconColor: "#eee",
         },
-        200: { name: "Stick", type: "item", iconColor: "#8d6e63" },
-        201: { name: "Coal", type: "item", iconColor: "#333" },
-        202: { name: "Iron", type: "item", iconColor: "#ccc" },
-        203: { name: "Gold", type: "item", iconColor: "#ff0" },
-        204: { name: "Diamond", type: "item", iconColor: "#0ff" },
-        300: { name: "Apple", type: "food", food: 4, iconColor: "#f44336" },
-        301: { name: "Bread", type: "food", food: 6, iconColor: "#d7ccc8" },
-        302: { name: "Steak", type: "food", food: 10, iconColor: "#795548" },
+        200: { name: "棒", type: "item", iconColor: "#8d6e63" },
+        201: { name: "石炭", type: "item", iconColor: "#333" },
+        202: { name: "鉄インゴット", type: "item", iconColor: "#ccc" },
+        203: { name: "金インゴット", type: "item", iconColor: "#ff0" },
+        204: { name: "ダイヤモンド", type: "item", iconColor: "#0ff" },
+        300: { name: "リンゴ", type: "food", food: 4, iconColor: "#f44336" },
+        301: { name: "パン", type: "food", food: 6, iconColor: "#d7ccc8" },
+        302: { name: "ステーキ", type: "food", food: 10, iconColor: "#795548" },
       };
 
       const RECIPES = [
@@ -659,7 +657,6 @@
             this.isHost = d.role === "HOST";
             this.hostId = this.isHost ? this.myId : d.hostId;
 
-            // ★役割決定時点でゲームループを開始（描画のため）
             this.game.start();
 
             if (this.isHost) {
@@ -667,7 +664,7 @@
             } else {
               document.getElementById("loading-screen").style.display = "flex";
               document.getElementById("loading-screen").innerText =
-                "Waiting for host...";
+                "ホストの参加を待機中...";
             }
           });
 
@@ -766,9 +763,8 @@
           dc.onopen = () => {
             console.log("DataChannel OPEN with", target);
 
-            // ★自分の情報を送信
             const myNick =
-              document.getElementById("nick-input").value || "Player";
+              document.getElementById("nick-input").value || "プレイヤー";
             const myColor =
               document.getElementById("color-input").value || "#29b6f6";
 
@@ -780,7 +776,7 @@
 
             if (!this.isHost) {
               document.getElementById("loading-screen").innerText =
-                "Synchronizing world...";
+                "ワールドデータを同期中...";
               this.sendTo(target, { type: "REQUEST_SYNC" });
             }
           };
@@ -998,8 +994,8 @@
           this.height = this.canvas.height = window.innerHeight;
         }
         start() {
-          // 初期スポーン (仮)
-          const nick = document.getElementById("nick-input").value || "Player";
+          const nick =
+            document.getElementById("nick-input").value || "プレイヤー";
           const color =
             document.getElementById("color-input").value || "#29b6f6";
           this.spawnPlayer(this.net.myId, 0, -200, nick, color);
@@ -1064,7 +1060,6 @@
           document.getElementById("mining-bar").style.width = pct + "%";
 
           if (this.mining.progress >= block.hardness) {
-            // ★ブロック破壊同期
             if (!this.net.isHost) {
               this.net.send({ type: "BREAK", x: bx, y: by });
             }
@@ -1167,14 +1162,14 @@
             if (b.liquid) ctx.globalAlpha = 0.6;
             ctx.fillRect(0, 0, 32, 32);
             ctx.globalAlpha = 1.0;
-            if (b.name === "Glass") {
+            if (b.name === "ガラス") {
               ctx.strokeStyle = "#fff";
               ctx.strokeRect(4, 4, 10, 10);
             } else if (b.name === "TNT") {
               ctx.fillStyle = "white";
               ctx.font = "10px Arial";
               ctx.fillText("TNT", 6, 20);
-            } else if (b.name === "Cactus") {
+            } else if (b.name === "サボテン") {
               ctx.fillStyle = "#000";
               ctx.fillRect(4, 4, 2, 24);
               ctx.fillRect(26, 4, 2, 24);
@@ -1452,8 +1447,7 @@
           return id && BLOCKS[id] && BLOCKS[id].solid;
         }
 
-        // ★修正: ニックネームと色を追加
-        spawnPlayer(id, x, y, nick = "Player", color = "#ccc") {
+        spawnPlayer(id, x, y, nick = "プレイヤー", color = "#ccc") {
           this.players[id] = {
             id,
             x,
@@ -1550,8 +1544,6 @@
             this.updateUI();
           } else if (msg.type === "BLOCK") {
             this.setBlock(msg.x, msg.y, msg.id);
-
-            // ★追加: プレイヤー情報初期化受信
           } else if (msg.type === "INIT_PLAYER") {
             if (!this.players[sender]) {
               this.spawnPlayer(sender, 0, -200, msg.nick, msg.color);
@@ -1561,7 +1553,6 @@
             }
           } else if (this.net.isHost) {
             if (msg.type === "REQUEST_SYNC") {
-              // ホスト側に存在しない場合は生成 (まだINIT_PLAYERが来ていない場合など)
               if (!this.players[sender]) {
                 this.spawnPlayer(sender, 0, -200);
               }
@@ -1594,7 +1585,6 @@
                 if (item.count <= 0) item.id = 0;
               }
             }
-            // ★追加: ブロック破壊受信
             if (msg.type === "BREAK") {
               this.setBlock(msg.x, msg.y, 0);
             }
@@ -1792,7 +1782,6 @@
             const px = ply.x - this.cam.x,
               py = ply.y - this.cam.y;
 
-            // ★変更: スキン色と点滅表現
             this.ctx.fillStyle = ply.color || "#ccc";
             this.ctx.fillRect(px, py, 24, 54);
 
@@ -1801,13 +1790,11 @@
               this.ctx.fillRect(px, py, 24, 54);
             }
 
-            // ★追加: ニックネーム描画
             this.ctx.fillStyle = "white";
-            this.ctx.font = "12px Consolas";
+            this.ctx.font = "12px sans-serif";
             this.ctx.textAlign = "center";
             this.ctx.fillText(ply.nick || "Unknown", px + 12, py - 10);
 
-            // ★追加: 簡易HPバー (他人のHP)
             if (id !== this.net.myId) {
               this.ctx.fillStyle = "red";
               this.ctx.fillRect(px, py - 6, 24, 4);
@@ -1817,7 +1804,7 @@
           }
 
           document.getElementById("time-info").innerText =
-            dayTime < 12000 ? "Day" : "Night";
+            dayTime < 12000 ? "時間: 昼" : "時間: 夜";
           this.sendInput();
         }
 
