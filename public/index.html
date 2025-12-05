@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>FullStackCraft v24 - Final Fix</title>
+    <title>FullStackCraft v25 - Logic Fixed</title>
     <style>
       body {
         margin: 0;
@@ -307,8 +307,8 @@
   <body>
     <div id="ui-layer">
       <div id="login-screen">
-        <h1>FullStackCraft v24</h1>
-        <p style="color: #ffd700">FINAL FIX UPDATE</p>
+        <h1>FullStackCraft v25</h1>
+        <p style="color: #ffd700">FIXED LOGIC</p>
         <p>Short Tap: Place | Hold: Mine</p>
         <input
           type="text"
@@ -390,12 +390,11 @@
     <script src="/socket.io/socket.io.js"></script>
 
     <script>
-      // FullStackCraft v24 - Final Fix
+      // FullStackCraft v25 - Logic Fixed
       const TILE_SIZE = 48;
       const CHUNK_SIZE = 16;
       const GRAVITY = 0.5;
 
-      // ★硬度(hardness)を全体的に下げ、破壊しやすく調整
       const BLOCKS = {
         0: { name: "Air", solid: false },
         1: {
@@ -426,7 +425,7 @@
           solid: true,
           hardness: 40,
           drop: 4,
-        }, // 素手でも早めに壊れる
+        },
         5: {
           name: "Leaves",
           color: "#388e3c",
@@ -701,11 +700,18 @@
           };
           dc.onmessage = (e) => this.game.onPacket(JSON.parse(e.data), target);
         }
+
+        // ★修正ポイント: ホストの場合、自分自身にイベントを送る(ループバック)
         send(msg) {
-          if (this.isHost) this.broadcast(msg);
-          else if (this.hostId && this.channels[this.hostId])
+          if (this.isHost) {
+            // ホスト自身でロジックを処理
+            this.game.onPacket(msg, this.myId);
+          } else if (this.hostId && this.channels[this.hostId]) {
+            // クライアントはホストに送信
             this.channels[this.hostId].send(JSON.stringify(msg));
+          }
         }
+
         broadcast(msg) {
           const s = JSON.stringify(msg);
           for (let id in this.channels)
@@ -752,7 +758,7 @@
           this.mining = { active: false, bx: 0, by: 0, progress: 0 };
 
           this.interact = { startT: 0, active: false };
-          this.longPressThreshold = 200; // 少し短くして反応良く
+          this.longPressThreshold = 200;
 
           this.craftGrid = Array(9).fill({ id: 0, count: 0 });
           this.craftResult = { id: 0, count: 0 };
@@ -790,7 +796,6 @@
             this.handleInputEnd(e.button === 2)
           );
 
-          // Touch events
           const touchStart = (e) => {
             if (e.touches.length > 0)
               this.handleInputStart(
@@ -809,7 +814,7 @@
           });
           this.canvas.addEventListener("touchcancel", touchEnd, {
             passive: false,
-          }); // キャンセル時も終了
+          });
 
           this.canvas.addEventListener(
             "touchmove",
@@ -860,7 +865,6 @@
           this.mining.progress = 0;
 
           const duration = Date.now() - this.interact.startT;
-          // Short tap or right click -> Place/Interact
           if (
             duration < this.longPressThreshold ||
             isRightClick ||
@@ -994,6 +998,7 @@
 
             let did = BLOCKS[id].drop || id;
             if (did) {
+              // ここでドロップ要求を送信 -> ホスト自身ならループバックして処理される
               this.net.send({
                 type: "DROP",
                 x: bx * TILE_SIZE + 24,
@@ -1041,7 +1046,6 @@
           const bx = Math.floor(mx / TILE_SIZE);
           const by = Math.floor(my / TILE_SIZE);
 
-          // ターゲットが変わったら進行度リセット
           if (bx !== this.mining.bx || by !== this.mining.by) {
             this.mining.progress = 0;
             this.mining.bx = bx;
@@ -1075,6 +1079,7 @@
                 by * TILE_SIZE + TILE_SIZE > p.y
               )
             ) {
+              // ここで設置要求を送信 -> ホスト自身ならループバックして処理される
               this.net.send({
                 type: "PLACE",
                 x: bx,
@@ -1085,7 +1090,6 @@
           }
         }
 
-        // --- Standard Methods ---
         genAssets() {
           for (let id in BLOCKS) {
             if (id == 0) continue;
