@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>FullStackCraft v25 - Logic Fixed</title>
+    <title>FullStackCraft v27 - Crash Fix</title>
     <style>
       body {
         margin: 0;
@@ -307,9 +307,9 @@
   <body>
     <div id="ui-layer">
       <div id="login-screen">
-        <h1>FullStackCraft v25</h1>
-        <p style="color: #ffd700">FIXED LOGIC</p>
-        <p>Short Tap: Place | Hold: Mine</p>
+        <h1>FullStackCraft v27</h1>
+        <p style="color: #ffd700">CRASH FIX UPDATE</p>
+        <p>Fixed: "solid" error on tools</p>
         <input
           type="text"
           id="room-input"
@@ -390,7 +390,7 @@
     <script src="/socket.io/socket.io.js"></script>
 
     <script>
-      // FullStackCraft v25 - Logic Fixed
+      // FullStackCraft v27 - Crash Fix
       const TILE_SIZE = 48;
       const CHUNK_SIZE = 16;
       const GRAVITY = 0.5;
@@ -684,30 +684,17 @@
         setupDC(dc, target) {
           this.channels[target] = dc;
           dc.onopen = () => {
-            if (this.isHost) {
-              this.sendTo(target, {
-                type: "CHUNK_DATA",
-                chunks: this.game.chunks,
-              });
-              this.sendTo(target, {
-                type: "SYNC",
-                players: this.game.players,
-                drops: this.game.drops,
-                mobs: this.game.mobs,
-                time: this.game.time,
-              });
+            if (!this.isHost) {
+              this.sendTo(target, { type: "REQUEST_SYNC" });
             }
           };
           dc.onmessage = (e) => this.game.onPacket(JSON.parse(e.data), target);
         }
 
-        // ★修正ポイント: ホストの場合、自分自身にイベントを送る(ループバック)
         send(msg) {
           if (this.isHost) {
-            // ホスト自身でロジックを処理
             this.game.onPacket(msg, this.myId);
           } else if (this.hostId && this.channels[this.hostId]) {
-            // クライアントはホストに送信
             this.channels[this.hostId].send(JSON.stringify(msg));
           }
         }
@@ -975,7 +962,8 @@
               "none";
             return;
           }
-          if (BLOCKS[id].unbreakable) return;
+          // ★安全対策：BLOCKSにないIDの場合は中断
+          if (!BLOCKS[id] || BLOCKS[id].unbreakable) return;
 
           const p = this.players[this.net.myId];
           const tool = ITEMS[p.inv[this.selSlot]?.id] || ITEMS[1];
@@ -998,7 +986,6 @@
 
             let did = BLOCKS[id].drop || id;
             if (did) {
-              // ここでドロップ要求を送信 -> ホスト自身ならループバックして処理される
               this.net.send({
                 type: "DROP",
                 x: bx * TILE_SIZE + 24,
@@ -1070,7 +1057,8 @@
             this.net.send({ type: "EAT", slot: this.selSlot });
             return;
           }
-          if (item.id && !this.isSolid(bx, by)) {
+          // ★バグ修正：ブロック定義に存在するIDのみ設置許可（道具を置かせない）
+          if (BLOCKS[item.id] && !this.isSolid(bx, by)) {
             if (
               !(
                 bx * TILE_SIZE < p.x + 24 &&
@@ -1079,7 +1067,6 @@
                 by * TILE_SIZE + TILE_SIZE > p.y
               )
             ) {
-              // ここで設置要求を送信 -> ホスト自身ならループバックして処理される
               this.net.send({
                 type: "PLACE",
                 x: bx,
@@ -1390,9 +1377,11 @@
               }
           if (axis === "y") e.grounded = false;
         }
+
+        // ★修正ポイント: 不正なIDや未定義のブロックでのクラッシュを防ぐ
         isSolid(x, y) {
           const id = this.getBlock(x, y);
-          return id && BLOCKS[id].solid;
+          return id && BLOCKS[id] && BLOCKS[id].solid;
         }
 
         spawnPlayer(id, x, y) {
@@ -1489,6 +1478,19 @@
           } else if (msg.type === "BLOCK") {
             this.setBlock(msg.x, msg.y, msg.id);
           } else if (this.net.isHost) {
+            if (msg.type === "REQUEST_SYNC") {
+              this.net.sendTo(sender, {
+                type: "CHUNK_DATA",
+                chunks: this.chunks,
+              });
+              this.net.sendTo(sender, {
+                type: "SYNC",
+                players: this.players,
+                drops: this.drops,
+                mobs: this.mobs,
+                time: this.time,
+              });
+            }
             if (msg.type === "INPUT") {
               const p = this.players[sender];
               if (p && p.hp > 0) {
@@ -1522,6 +1524,41 @@
                 for (let dx = -3; dx <= 3; dx++)
                   if (dx * dx + dy * dy < 10)
                     this.setBlock(msg.x + dx, msg.y + dy, 0);
+              const blastX = msg.x * TILE_SIZE + TILE_SIZE / 2;
+              const blastY = msg.y * TILE_SIZE + TILE_SIZE / 2;
+              const radius = 200;
+              const entities = [
+                ...Object.values(this.players).map((p) => ({
+                  ...p,
+                  type: "player",
+                })),
+                ...Object.values(this.mobs).map((m) => ({ ...m, type: "mob" })),
+              ];
+              entities.forEach((e) => {
+                const dist = Math.hypot(e.x - blastX, e.y - blastY);
+                if (dist < radius) {
+                  const damage = Math.floor((1 - dist / radius) * 20);
+                  const knockback = (1 - dist / radius) * 15;
+                  const angle = Math.atan2(e.y - blastY, e.x - blastX);
+                  if (e.type === "player") {
+                    const target = this.players[e.id];
+                    target.hp -= damage;
+                    target.vx += Math.cos(angle) * knockback;
+                    target.vy += Math.sin(angle) * knockback - 5;
+                    if (target.hp <= 0) this.killPlayer(e.id);
+                  } else {
+                    const target = this.mobs[e.id];
+                    if (target) {
+                      target.hp -= damage;
+                      target.vx += Math.cos(angle) * knockback;
+                      target.vy += Math.sin(angle) * knockback - 5;
+                      if (target.hp <= 0) {
+                        delete this.mobs[e.id];
+                      }
+                    }
+                  }
+                }
+              });
             }
             if (msg.type === "HIT") {
               const attacker = this.players[sender];
